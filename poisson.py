@@ -3,20 +3,22 @@ import sys
 
 mesh = Mesh('mesh.msh')
 
-V = FunctionSpace(mesh, "CG", 2)
+V = FunctionSpace(mesh, "CG", 1)
 
 x = SpatialCoordinate(mesh)
 sig_1 = Constant(1)
-sig_2 = Constant(-.5)
+sig_2 = Constant(-1.5)
 sigma = conditional(lt(x[0], Constant(0)), sig_1, sig_2)
+gamma = 1e1
+aux = 1 + complex(0,gamma) * sign(sigma)
 
 u = TrialFunction(V)
 v = TestFunction(V)
 
-a = sigma * inner(grad(u), grad(v)) * dx
+a = aux * sigma * inner(grad(u), grad(v)) * dx
 
-xi_1 = (x[0]+1)**2 - (2*sig_1+sig_2)*sin(pi*x[1])*(x[0]+1) / (sig_1+sig_2)
-xi_2 = sig_1 * (x[1] - 1) * sin(pi*x[1]) / (sig_1+sig_2)
+xi_1 = ((x[0]+1)**2 - (2*sig_1+sig_2)*(x[0]+1) / (sig_1+sig_2)) * sin(pi*x[1])
+xi_2 = sig_1 * (x[0] - 1) * sin(pi*x[1]) / (sig_1+sig_2)
 xi = conditional(lt(x[0], Constant(0)), xi_1, xi_2)
 
 bcs = [DirichletBC(V, xi, 1)]
@@ -31,6 +33,8 @@ uu = Function(V, name='solution')
 
 solve(a == L, uu, bcs=bcs, solver_parameters={"ksp_type": "preonly",
                                               "pc_type": "lu"})
+sys.exit()
+
 out = File('out.pvd')
 out.write(uu)
 
