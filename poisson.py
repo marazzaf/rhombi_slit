@@ -10,7 +10,7 @@ sig_1 = Constant(1)
 sig_2 = Constant(-1.5)
 sigma = conditional(lt(x[0], Constant(0)), sig_1, sig_2)
 gamma = 1e1
-aux = 1 + complex(0,gamma) * sign(sigma)
+aux = 1 + gamma * sign(sigma)
 
 u = TrialFunction(V)
 v = TestFunction(V)
@@ -31,10 +31,8 @@ uu = Function(V, name='solution')
 # configuring the solver.  First, a direct solve with an assembled
 # operator.::
 
-solve(a == L, uu, bcs=bcs, solver_parameters={"ksp_type": "preonly",
-                                              "pc_type": "lu"})
-sys.exit()
-
+solve(a == L, uu, bcs=bcs) #, solver_parameters={"ksp_type": "cg",
+                                              "pc_type": "gamg"})
 out = File('out.pvd')
 out.write(uu)
 
