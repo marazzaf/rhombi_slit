@@ -1,16 +1,7 @@
-# Poisson equation
-# ================
-#
-# It is what it is, a conforming discretization on a regular mesh using
-# piecewise quadratic elements.
-#
-# As usual we start by importing firedrake and setting up the problem.::
-
 from firedrake import *
+import sys
 
-N = 128
-
-mesh = UnitSquareMesh(N, N)
+mesh = Mesh('mesh.msh')
 
 V = FunctionSpace(mesh, "CG", 2)
 
@@ -24,7 +15,7 @@ F = Function(V)
 F.interpolate(sin(x[0]*pi)*sin(2*x[1]*pi))
 L = F*v*dx
 
-bcs = [DirichletBC(V, Constant(2.0), (1,))]
+bcs = [DirichletBC(V, Constant(2.0), 1)]
 
 uu = Function(V)
 
@@ -34,17 +25,10 @@ uu = Function(V)
 
 solve(a == L, uu, bcs=bcs, solver_parameters={"ksp_type": "preonly",
                                               "pc_type": "lu"})
+out = File('out.pvd')
+out.write(uu)
 
-# Next, we use unpreconditioned conjugate gradients using matrix-free
-# actions.  This is not very efficient due to the :math:`h^{-2}`
-# conditioning of the Laplacian, but demonstrates how to request an
-# unassembled operator using the ``"mat_type"`` solver parameter.::
-
-uu.assign(0)
-solve(a == L, uu, bcs=bcs, solver_parameters={"mat_type": "matfree",
-                                              "ksp_type": "cg",
-                                              "pc_type": "none",
-                                              "ksp_monitor": None})
+sys.exit()
 
 # Finally, we demonstrate the use of a :class:`.AssembledPC`
 # preconditioner.  This uses matrix-free actions but preconditions the
