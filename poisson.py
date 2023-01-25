@@ -5,19 +5,25 @@ mesh = Mesh('mesh.msh')
 
 V = FunctionSpace(mesh, "CG", 2)
 
+x = SpatialCoordinate(mesh)
+sig_1 = Constant(1)
+sig_2 = Constant(-.5)
+sigma = conditional(lt(x[0], Constant(0)), sig_1, sig_2)
+
 u = TrialFunction(V)
 v = TestFunction(V)
 
-a = inner(grad(u), grad(v)) * dx
+a = sigma * inner(grad(u), grad(v)) * dx
 
-x = SpatialCoordinate(mesh)
-F = Function(V)
-F.interpolate(sin(x[0]*pi)*sin(2*x[1]*pi))
-L = F*v*dx
+xi_1 = (x[0]+1)**2 - (2*sig_1+sig_2)*sin(pi*x[1])*(x[0]+1) / (sig_1+sig_2)
+xi_2 = sig_1 * (x[1] - 1) * sin(pi*x[1]) / (sig_1+sig_2)
+xi = conditional(lt(x[0], Constant(0)), xi_1, xi_2)
 
-bcs = [DirichletBC(V, Constant(2.0), 1)]
+bcs = [DirichletBC(V, xi, 1)]
 
-uu = Function(V)
+L = -div(sigma*grad(xi)) * v * dx
+
+uu = Function(V, name='solution')
 
 # With the setup out of the way, we now demonstrate various ways of
 # configuring the solver.  First, a direct solve with an assembled
@@ -27,6 +33,11 @@ solve(a == L, uu, bcs=bcs, solver_parameters={"ksp_type": "preonly",
                                               "pc_type": "lu"})
 out = File('out.pvd')
 out.write(uu)
+
+ref = File('ref.pvd')
+vv = Function(V, name='ref')
+vv.interpolate(xi)
+ref.write(vv)
 
 sys.exit()
 

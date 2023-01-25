@@ -1,6 +1,6 @@
 L = 2;
 H = 1;
-h = 0.1; //mesh size
+h = 0.02; //mesh size
 
 Point(1) = {-L/2, 0, 0, h};
 Point(2) = {L/2, 0, 0, h};
