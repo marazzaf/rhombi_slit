@@ -9,13 +9,11 @@ x = SpatialCoordinate(mesh)
 sig_1 = Constant(1)
 sig_2 = Constant(-1.5)
 sigma = conditional(lt(x[0], Constant(0)), sig_1, sig_2)
-gamma = 1e1
-aux = 1 + gamma * sign(sigma)
 
 u = TrialFunction(V)
 v = TestFunction(V)
 
-a = aux * sigma * inner(grad(u), grad(v)) * dx
+a = sigma * inner(grad(u), grad(v)) * dx
 
 xi_1 = ((x[0]+1)**2 - (2*sig_1+sig_2)*(x[0]+1) / (sig_1+sig_2)) * sin(pi*x[1])
 xi_2 = sig_1 * (x[0] - 1) * sin(pi*x[1]) / (sig_1+sig_2)
@@ -31,8 +29,7 @@ uu = Function(V, name='solution')
 # configuring the solver.  First, a direct solve with an assembled
 # operator.::
 
-solve(a == L, uu, bcs=bcs) #, solver_parameters={"ksp_type": "cg",
-                                              "pc_type": "gamg"})
+solve(a == L, uu, bcs=bcs) #, solver_parameters={"ksp_type": "cg", "pc_type": "gamg"})
 out = File('out.pvd')
 out.write(uu)
 
