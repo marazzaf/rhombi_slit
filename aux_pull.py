@@ -2,7 +2,7 @@ from firedrake import *
 import sys
 import numpy as np
 
-mesh = Mesh('mesh_aux.msh')
+mesh = Mesh('mesh_aux_pull.msh')
 L = 16
 H = 16
 
@@ -37,23 +37,23 @@ L = Constant(0) * v * dx
 
 #Dirichlet BC
 x = SpatialCoordinate(mesh)
-xi = x[1]/H * 0.73
-bcs = [DirichletBC(V, xi, 1)]
+xi = Constant(0.74)
+bcs = [DirichletBC(V, xi, 2)]
 
 ##Initial guess
 #A = assemble(a, bcs=bcs)
 #b = assemble(L, bcs=bcs)
 #solve(A, uu, b, solver_parameters={'direct_solver': 'mumps'})
-#out = File('guess.pvd')
+#out = File('guess_pull.pvd')
 #out.write(uu)
 
 #Newton solver
 a = inner(dot(Gamma, grad(uu)), grad(v)) * dx
 solve(a == 0, uu, bcs=bcs, solver_parameters={'snes_monitor': None, 'snes_max_it': 25})
 
-final = File('solution.pvd')
+final = File('sol_pull.pvd')
 final.write(uu)
 
-poisson = File('poisson.pvd')
+poisson = File('poisson_pull.pvd')
 aux = interpolate(Gamma21*mu1**2/(Gamma12*mu2**2), V)
 poisson.write(aux)
