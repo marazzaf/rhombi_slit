@@ -16,6 +16,6 @@ Line Loop(1) = {1:4};
 
 Plane Surface(1) = {1};
 
-Physical Line(1) = {1,4};
+Physical Line(1) = {1,2,3,4};
 
 Physical Surface(1) = {1};

@@ -3,45 +3,52 @@ import sys
 import numpy as np
 
 mesh = Mesh('mesh_aux.msh')
+L = 16
+H = 16
 
 V = FunctionSpace(mesh, "CG", 1)
 
-sig_1 = Constant(1)
-sig_2 = Constant(-1.5)
-sigma = conditional(lt(x[0], Constant(0)), sig_1, sig_2)
+#material parameters
+ar = 1
+lamda1 = .95
+lamda2 = .95/ar
+lamda3 = .05
+lamda4 = .05/ar
+
+alpha = ar*(lamda4 - lamda2)
+beta = (lamda1 - lamda3)/ar
 
 #Complaince matrix
 uu = Function(V, name='solution')
-mu = 
-Gamma = as_tensor(())
+mu1 = cos(uu) - alpha*sin(uu)
+mu1_p = -sin(uu) - alpha*cos(uu)
+mu2 = cos(uu) + beta*sin(uu)
+mu2_p = -sin(uu) + beta*cos(uu)
+Gamma12 = -mu1_p / mu2
+Gamma21 = mu2_p / mu1
+Gamma = as_tensor(((-Gamma21, Constant(0)), (Constant(0), Gamma12)))
 
 #Weak formulation
 u = TrialFunction(V)
 v = TestFunction(V)
-a = sigma * inner(grad(u), grad(v)) * dx
+a = inner(dot(Gamma, grad(u)), grad(v)) * dx
 L = Constant(0) * v * dx
 
 #Dirichlet BC
 x = SpatialCoordinate(mesh)
-xi = 
+xi = x[1]/H * 0.73
 bcs = [DirichletBC(V, xi, 1)]
 
-
-
-# With the setup out of the way, we now demonstrate various ways of
-# configuring the solver.  First, a direct solve with an assembled
-# operator.::
-
-solve(a == L, uu, bcs=bcs) #, solver_parameters={"ksp_type": "cg", "pc_type": "gamg"})
-out = File('out.pvd')
+#Initial guess
+A = assemble(a, bcs=bcs)
+b = assemble(L, bcs=bcs)
+solve(A, uu, b, solver_parameters={'direct_solver': 'mumps'})
+out = File('guess.pvd')
 out.write(uu)
 
-ref = File('ref.pvd')
-vv = Function(V, name='ref')
-vv.interpolate(xi)
-ref.write(vv)
-
-sys.exit()
-
 #Newton solver
-solve(a == 0, uu, bcs=bcs)
+a = inner(dot(Gamma, grad(uu)), grad(v)) * dx
+solve(a == 0, uu, bcs=bcs, solver_parameters={'snes_monitor': None, 'snes_max_it': 25})
+
+final = File('solution.pvd')
+final.write(uu)
