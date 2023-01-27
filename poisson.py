@@ -1,7 +1,14 @@
 from firedrake import *
 import sys
+import numpy as np
 
-mesh = Mesh('mesh.msh')
+#mesh = Mesh('mesh.msh')
+#structured mesh
+Nx = 20
+xcoords = np.linspace(-1,1,Nx)
+Ny = Nx//2
+ycoords = np.linspace(0,1,Ny)
+mesh = TensorRectangleMesh(xcoords, ycoords, diagonal="crossed")
 
 V = FunctionSpace(mesh, "CG", 1)
 
