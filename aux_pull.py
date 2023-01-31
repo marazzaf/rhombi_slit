@@ -6,7 +6,7 @@ mesh = Mesh('mesh_aux_pull.msh')
 L = 16
 H = 16
 
-V = FunctionSpace(mesh, "CG", 1)
+V = FunctionSpace(mesh, "CG", 2)
 print('Nb dof: %i' % V.dim())
 
 #material parameters
@@ -37,15 +37,10 @@ L = Constant(0) * v * dx
 
 #Dirichlet BC
 x = SpatialCoordinate(mesh)
-xi = Constant(0.74)
-bcs = [DirichletBC(V, xi, 2)]
-
-##Initial guess
-#A = assemble(a, bcs=bcs)
-#b = assemble(L, bcs=bcs)
-#solve(A, uu, b, solver_parameters={'direct_solver': 'mumps'})
-#out = File('guess_pull.pvd')
-#out.write(uu)
+aux1 = 0.74 * (2 - x[1]/H*2)
+aux2 = 0.74 * x[1]/H*2
+xi = conditional(lt(x[1], H/2), aux2, aux1)
+bcs = [DirichletBC(V, xi, 1)]
 
 #Newton solver
 a = inner(dot(Gamma, grad(uu)), grad(v)) * dx

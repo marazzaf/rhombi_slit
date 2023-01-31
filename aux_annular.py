@@ -6,7 +6,7 @@ mesh = Mesh('mesh_aux.msh')
 L = 16
 H = 16
 
-V = FunctionSpace(mesh, "CG", 1)
+V = FunctionSpace(mesh, "CG", 2)
 print('Nb dof: %i' % V.dim())
 
 #material parameters
@@ -37,7 +37,7 @@ L = Constant(0) * v * dx
 
 #Dirichlet BC
 x = SpatialCoordinate(mesh)
-xi = x[1]/H * 0.73
+xi = 0.73 * (1 - x[1]/H)  #-x[1]/H * 0.73
 bcs = [DirichletBC(V, xi, 1)]
 
 ##Initial guess
@@ -51,7 +51,7 @@ bcs = [DirichletBC(V, xi, 1)]
 a = inner(dot(Gamma, grad(uu)), grad(v)) * dx
 solve(a == 0, uu, bcs=bcs, solver_parameters={'snes_monitor': None, 'snes_max_it': 25})
 
-final = File('solution.pvd')
+final = File('aux_ann_sol.pvd')
 final.write(uu)
 
 poisson = File('poisson.pvd')
