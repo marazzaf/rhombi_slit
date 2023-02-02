@@ -12,17 +12,17 @@ boundaries.set_all(0)
 
 class Bnd(SubDomain):
     def inside(self, x, on_boundary):
-        return on_boundary and (near(x[1], 0) or near(x[1], H)) #and (near(x[0], 0) or near(x[0], L)) #and (near(x[1], 0) or near(x[1], H))
+        return on_boundary #and (near(x[1], 0) or near(x[1], H)) #and (near(x[0], 0) or near(x[0], L)) #and (near(x[1], 0) or near(x[1], H))
 bnd = Bnd()
 bnd.mark(boundaries, 1)
 
 #Function space
-V = FunctionSpace(mesh, "DG", 2)
+V = FunctionSpace(mesh, "CG", 2)
 print('Nb dof: %i' % V.dim())
 
 #material parameters
 alpha = -.9
-beta = 0.51 #0.21
+beta = 0.9 #0 #0.54 #0.21
 
 #Compliance matrix
 uu = Function(V, name='solution')
@@ -45,24 +45,28 @@ n = FacetNormal(mesh)
 sigma = dot(Gamma, grad(uu))
 #Lhs
 a = inner(sigma, grad(v)) * dx
-a -= inner(dot(avg(sigma), n('+')), jump(v)) * dS
-a += inner(dot(avg(dot(Gamma, grad(v))), n('+')), jump(uu)) * dS
-a += pen/hF * inner(jump(uu), jump(v)) * dS
+a = inner(sigma, dot(Gamma, grad(v))) * dx
+#a -= inner(dot(avg(sigma), n('+')), jump(v)) * dS
+#a += inner(dot(avg(dot(Gamma, grad(v))), n('+')), jump(uu)) * dS
+#a += pen/hF * inner(jump(uu), jump(v)) * dS
 
 #Dirichlet BC
 x = SpatialCoordinate(mesh)
-xi = 0.5 * (1 - x[1]/H)  #-x[1]/H * 0.73
+xi = 0.5 * (1 - x[1]/H)
 bcs = DirichletBC(V, xi, boundaries, 1, method='geometric')
 
 #Rhs
-L = Constant(0) * v * dx
-
+#L = Constant(0) * v * dx
 #Linear solver to test
 #solve(a == L, uu, bcs=bcs)                                             
 
 #Newton solver
-solve(a == 0, uu, bcs=bcs, solver_parameters={'newton_solver': {'maximum_iterations': 10, 'relative_tolerance': 1e-6}})
-
+#solve(a == 0, uu, bcs=bcs)
+try:
+    solve(a == 0, uu, bcs=bcs, solver_parameters={"nonlinear_solver": "snes", 'snes_solver': {'maximum_iterations': 10}}) #, 'relative_tolerance': 1e-6}})#, 'linear_solver': 'gmres', 'preconditioner': 'ilu'}})
+except RuntimeError:
+    pass
+    
 final = File('test.pvd')
 final.write(uu)
 
