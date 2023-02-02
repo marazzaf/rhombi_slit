@@ -11,7 +11,7 @@ print('Nb dof: %i' % V.dim())
 
 #material parameters
 alpha = -.9
-beta = 0.21
+beta = 0.1
 
 #Complaince matrix
 uu = Function(V, name='solution')
