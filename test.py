@@ -22,7 +22,7 @@ print('Nb dof: %i' % V.dim())
 
 #material parameters
 alpha = -.9
-beta = 0.9 #0 #0.54 #0.21
+beta = 0.21 #0 #0.54 #0.21
 
 #Compliance matrix
 uu = Function(V, name='solution')
