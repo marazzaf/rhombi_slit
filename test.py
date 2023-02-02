@@ -1,17 +1,18 @@
 from dolfin import *
 import sys
 import numpy as np
+from ufl import sign
 
 #mesh
 L, H = 16, 16
-N = 25
-mesh = RectangleMesh(Point(0,0), Point(L,H), N, N, 'crossed')
+N = 50
+mesh = RectangleMesh(Point(0,0), Point(L,H), N, N, 'left')
 boundaries = MeshFunction("size_t", mesh,1)
 boundaries.set_all(0)
 
 class Bnd(SubDomain):
     def inside(self, x, on_boundary):
-        return on_boundary and (near(x[1], 0) or near(x[1], H))
+        return on_boundary and (near(x[1], 0) or near(x[1], H)) #and (near(x[0], 0) or near(x[0], L)) #and (near(x[1], 0) or near(x[1], H))
 bnd = Bnd()
 bnd.mark(boundaries, 1)
 
@@ -21,7 +22,7 @@ print('Nb dof: %i' % V.dim())
 
 #material parameters
 alpha = -.9
-beta = 0.21
+beta = 0.51 #0.21
 
 #Compliance matrix
 uu = Function(V, name='solution')
@@ -32,11 +33,12 @@ mu2_p = -sin(uu) + beta*cos(uu)
 Gamma12 = -mu1_p / mu2
 Gamma21 = mu2_p / mu1
 Gamma = as_tensor(((-Gamma21, Constant(0)), (Constant(0), Gamma12)))
+poisson = Gamma21*mu1**2/(Gamma12*mu2**2)
 
 #Weak formulation
 u = TrialFunction(V)
 v = TestFunction(V)
-pen = 10 #Make it a non-constant function?
+pen = 10 * (sign(poisson)('-') + sign(poisson)('+')) #Make it a non-constant function?
 h = CellDiameter(mesh)
 hF = 0.5*(h('-')+h('+'))
 n = FacetNormal(mesh)
@@ -59,12 +61,11 @@ L = Constant(0) * v * dx
 #solve(a == L, uu, bcs=bcs)                                             
 
 #Newton solver
-solve(a == 0, uu, bcs=bcs, solver_parameters={'newton_solver': {'maximum_iterations': 10}})
+solve(a == 0, uu, bcs=bcs, solver_parameters={'newton_solver': {'maximum_iterations': 10, 'relative_tolerance': 1e-6}})
 
 final = File('test.pvd')
 final.write(uu)
 
-poisson = File('test_poisson.pvd')
-from ufl import sign
-aux = project(sign(Gamma21*mu1**2/(Gamma12*mu2**2)), V)
-poisson.write(aux)
+Poisson = File('test_poisson.pvd')
+aux = project(poisson, V)
+Poisson.write(aux)
