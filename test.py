@@ -12,7 +12,7 @@ boundaries.set_all(0)
 
 class Bnd(SubDomain):
     def inside(self, x, on_boundary):
-        return on_boundary #and (near(x[1], 0) or near(x[1], H)) #and (near(x[0], 0) or near(x[0], L)) #and (near(x[1], 0) or near(x[1], H))
+        return on_boundary and (near(x[1], 0) or near(x[1], H)) #and (near(x[0], 0) or near(x[0], L)) #and (near(x[1], 0) or near(x[1], H))
 bnd = Bnd()
 bnd.mark(boundaries, 1)
 
