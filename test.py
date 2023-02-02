@@ -1,53 +1,70 @@
 from dolfin import *
 import sys
 import numpy as np
-import matplotlib.pyplot as plt
 
-#Mesh
-Nx = 5
-xcoords = np.linspace(-1,1,Nx)
-Ny = Nx//2
-ycoords = np.linspace(0,1,Ny)
-mesh = RectangleMesh(Point(-1,0), Point(1,1), Nx, Ny, diagonal="crossed")
-
-#Boundary
+#mesh
+L, H = 16, 16
+N = 25
+mesh = RectangleMesh(Point(0,0), Point(L,H), N, N, 'crossed')
 boundaries = MeshFunction("size_t", mesh,1)
 boundaries.set_all(0)
 
-V = FunctionSpace(mesh, "CG", 1)
+class Bnd(SubDomain):
+    def inside(self, x, on_boundary):
+        return on_boundary and (near(x[1], 0) or near(x[1], H))
+bnd = Bnd()
+bnd.mark(boundaries, 1)
 
-x = SpatialCoordinate(mesh)
-sig_1 = Constant(1)
-sig_2 = Constant(-1.5)
-sigma = conditional(lt(x[0], Constant(0)), sig_1, sig_2)
+#Function space
+V = FunctionSpace(mesh, "DG", 2)
+print('Nb dof: %i' % V.dim())
 
+#material parameters
+alpha = -.9
+beta = 0.21
+
+#Compliance matrix
+uu = Function(V, name='solution')
+mu1 = cos(uu) - alpha*sin(uu)
+mu1_p = -sin(uu) - alpha*cos(uu)
+mu2 = cos(uu) + beta*sin(uu)
+mu2_p = -sin(uu) + beta*cos(uu)
+Gamma12 = -mu1_p / mu2
+Gamma21 = mu2_p / mu1
+Gamma = as_tensor(((-Gamma21, Constant(0)), (Constant(0), Gamma12)))
+
+#Weak formulation
 u = TrialFunction(V)
 v = TestFunction(V)
+pen = 10 #Make it a non-constant function?
+h = CellDiameter(mesh)
+hF = 0.5*(h('-')+h('+'))
+n = FacetNormal(mesh)
+sigma = dot(Gamma, grad(uu))
+#Lhs
+a = inner(sigma, grad(v)) * dx
+a -= inner(dot(avg(sigma), n('+')), jump(v)) * dS
+a += inner(dot(avg(dot(Gamma, grad(v))), n('+')), jump(uu)) * dS
+a += pen/hF * inner(jump(uu), jump(v)) * dS
 
-a = sigma * inner(grad(u), grad(v)) * dx
+#Dirichlet BC
+x = SpatialCoordinate(mesh)
+xi = 0.5 * (1 - x[1]/H)  #-x[1]/H * 0.73
+bcs = DirichletBC(V, xi, boundaries, 1, method='geometric')
 
-xi_1 = ((x[0]+1)**2 - (2*sig_1+sig_2)*(x[0]+1) / (sig_1+sig_2)) * sin(pi*x[1])
-xi_2 = sig_1 * (x[0] - 1) * sin(pi*x[1]) / (sig_1+sig_2)
-xi = conditional(lt(x[0], Constant(0)), xi_1, xi_2)
-#xi = Expression('x[0] < 0 ? xi_1 : xi_2', xi_1=xi_1, xi_2=xi_2, degree=3)
+#Rhs
+L = Constant(0) * v * dx
 
-bcs = [DirichletBC(V, xi, boundaries, 0)]
+#Linear solver to test
+#solve(a == L, uu, bcs=bcs)                                             
 
-L = -div(sigma*grad(xi)) * v * dx
+#Newton solver
+solve(a == 0, uu, bcs=bcs, solver_parameters={'newton_solver': {'maximum_iterations': 10}})
 
-uu = Function(V, name='solution')
+final = File('test.pvd')
+final.write(uu)
 
-# With the setup out of the way, we now demonstrate various ways of
-# configuring the solver.  First, a direct solve with an assembled
-# operator.::
-
-solve(a == L, uu, bcs=bcs) #, solver_parameters={"ksp_type": "cg", "pc_type": "gamg"})
-out = File('out.pvd')
-out.write(uu)
-
-ref = File('ref.pvd')
-vv = project(xi, V)
-ref.write(vv)
-
-err = errornorm(uu, vv, 'h1')
-print('Error: %.2e' % err)
+poisson = File('test_poisson.pvd')
+from ufl import sign
+aux = project(sign(Gamma21*mu1**2/(Gamma12*mu2**2)), V)
+poisson.write(aux)
