@@ -33,7 +33,7 @@ x = SpatialCoordinate(mesh)
 xi = 0.5 * (1 - x[1]/H) 
 bcs = [DirichletBC(V, xi, 1)]
 
-#uu.interpolate(xi)
+uu.interpolate(xi)
 
 #Newton solver
 solve(a == 0, uu, bcs=bcs, solver_parameters={'snes_monitor': None, 'snes_max_it': 25}) #, 'snes_rtol': 1e-2})
