@@ -2,7 +2,7 @@ from firedrake import *
 import sys
 import numpy as np
 
-mesh = Mesh('mesh_aux.msh')
+mesh = Mesh('mesh_test.msh')
 L = 16
 H = 16
 
@@ -10,16 +10,8 @@ V = FunctionSpace(mesh, "CG", 2)
 print('Nb dof: %i' % V.dim())
 
 #material parameters
-ar = 1
-lamda1 = .95
-lamda2 = .95/ar
-lamda3 = .05
-lamda4 = .05/ar
-
-#alpha = ar*(lamda4 - lamda2)
-#beta = (lamda1 - lamda3)/ar
 alpha = -.9
-beta = 0.54
+beta = 0
 
 #Complaince matrix
 uu = Function(V, name='solution')
@@ -32,18 +24,18 @@ Gamma21 = mu2_p / mu1
 Gamma = as_tensor(((-Gamma21, Constant(0)), (Constant(0), Gamma12)))
 
 #Weak formulation
-u = TrialFunction(V)
 v = TestFunction(V)
-a = inner(dot(Gamma, grad(u)), grad(v)) * dx
-L = Constant(0) * v * dx
+#a = inner(dot(Gamma, grad(uu)), grad(v)) * dx
+a = inner(dot(Gamma, grad(uu)), dot(Gamma, grad(v))) * dx
 
 #Dirichlet BC
 x = SpatialCoordinate(mesh)
-xi = 0.5 * (1 - x[1]/H)  #-x[1]/H * 0.73
+xi = 0.5 * (1 - x[1]/H) 
 bcs = [DirichletBC(V, xi, 1)]
 
+#uu.interpolate(xi)
+
 #Newton solver
-a = inner(dot(Gamma, grad(uu)), grad(v)) * dx
 solve(a == 0, uu, bcs=bcs, solver_parameters={'snes_monitor': None, 'snes_max_it': 25}) #, 'snes_rtol': 1e-2})
 
 final = File('non_ann_sol.pvd')
@@ -52,3 +44,8 @@ final.write(uu)
 poisson = File('non_ann_poisson.pvd')
 aux = interpolate(Gamma21*mu1**2/(Gamma12*mu2**2), V)
 poisson.write(aux)
+
+test = File('test_annular.pvd')
+W = FunctionSpace(mesh, 'DG', 0)
+aux = interpolate(div(dot(Gamma, grad(uu))), W)
+test.write(aux)
