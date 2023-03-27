@@ -1,10 +1,10 @@
 import dolfinx
 from mpi4py import MPI
 import numpy as np
-mesh = dolfinx.mesh.create_rectangle(MPI.COMM_WORLD, [[0,0], [16,16]], [10, 10])
+LL,H = 16,16
+mesh = dolfinx.mesh.create_rectangle(MPI.COMM_WORLD, [[0,0], [LL,H]], [10, 10])
 V = dolfinx.fem.FunctionSpace(mesh, ("Lagrange", 1))
 u_c = dolfinx.fem.Function(V, dtype=np.complex128)
-L,H = 16,16
 u_c.interpolate(lambda x:0.5 * (1 - x[1]/H) )
 print(u_c.x.array.dtype)
 
@@ -36,9 +36,12 @@ L = ufl.inner(f, v) * ufl.dx
 
 mesh.topology.create_connectivity(mesh.topology.dim-1, mesh.topology.dim)
 boundary_facets = dolfinx.mesh.exterior_facet_indices(mesh.topology)
-boundary_dofs = dolfinx.fem.locate_dofs_topological(V, mesh.topology.dim-1, boundary_facets)
-bc = dolfinx.fem.dirichletbc(u_c, boundary_dofs)
-problem = dolfinx.fem.petsc.LinearProblem(a, L, bcs=[bc])
+dofs_L = dolfinx.fem.locate_dofs_geometrical(V, lambda x: np.isclose(x[1], 0))
+#boundary_dofs = dolfinx.fem.locate_dofs_topological(V, mesh.topology.dim-1, boundary_facets)
+bc1 = dolfinx.fem.dirichletbc(u_c, dofs_L) #boundary_dofs)
+dofs_R = dolfinx.fem.locate_dofs_geometrical(V, lambda x: np.isclose(x[1], LL))
+bc2 = dolfinx.fem.dirichletbc(u_c, dofs_R)
+problem = dolfinx.fem.petsc.LinearProblem(a, L, bcs=[bc1,bc2])
 uh = problem.solve()
 
 with dolfinx.io.XDMFFile(mesh.comm, "res.xdmf", "w") as xdmf:
