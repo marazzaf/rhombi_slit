@@ -2,7 +2,7 @@ from firedrake import *
 import sys
 import numpy as np
 
-mesh = Mesh('mesh_aux_pull.msh')
+mesh = Mesh('mesh.msh')
 L = 16
 H = 16
 
@@ -44,3 +44,8 @@ final.write(uu)
 poisson = File('non_pull_poisson.pvd')
 aux = interpolate(Gamma21*mu1**2/(Gamma12*mu2**2), V)
 poisson.write(aux)
+
+test = File('test_pull.pvd')
+W = FunctionSpace(mesh, 'DG', 0)
+aux = interpolate(div(dot(Gamma, grad(uu))), W)
+test.write(aux)

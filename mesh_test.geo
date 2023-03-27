@@ -1,6 +1,6 @@
 L = 16;
 H = 16;
-h = 0.1; //mesh size
+h = 0.05; //mesh size
 
 Point(1) = {-L/2, 0, 0, h};
 Point(2) = {L/2, 0, 0, h};
@@ -16,6 +16,6 @@ Line Loop(1) = {1:4};
 
 Plane Surface(1) = {1};
 
-Physical Line(1) = {2,4};
+Physical Line(1) = {1,3};
 
 Physical Surface(1) = {1};
