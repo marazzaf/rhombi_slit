@@ -2,7 +2,7 @@ import dolfinx
 from mpi4py import MPI
 import numpy as np
 LL,H = 16,16
-mesh = dolfinx.mesh.create_rectangle(MPI.COMM_WORLD, [[0,0], [LL,H]], [50, 50])
+mesh = dolfinx.mesh.create_rectangle(MPI.COMM_WORLD, [[0,0], [LL,H]], [100, 100])
 V = dolfinx.fem.FunctionSpace(mesh, ("Lagrange", 1))
 
 from petsc4py import PETSc
@@ -24,7 +24,7 @@ Gamma = ufl.as_tensor(((-Gamma21, 0.), (0., Gamma12)))
 delta = 1e-2
 Gamma += ufl.as_tensor(((delta*1j, 0), (0, delta*1j)))
 #test
-Gamma = ufl.as_tensor(((Gamma21, 0.), (0., Gamma12)))
+#Gamma = ufl.as_tensor(((Gamma21, 0.), (0., Gamma12)))
 
 #Bilinear form
 v = ufl.TestFunction(V)
@@ -32,7 +32,7 @@ a = ufl.inner(ufl.dot(Gamma, ufl.grad(uu)), ufl.grad(v)) * ufl.dx
 
 #Boundary conditions
 u_bc = dolfinx.fem.Function(V, dtype=np.complex128)
-val = 0.15
+val = 0.1
 #xi = lambda x: val * x[1]/H*2 if np.where(x[1] < H/2) else val * (2 - x[1]/H*2)
 xi = lambda x: -4*val/H**2 * x[1] * (x[1] - H)
 u_bc.interpolate(xi)
@@ -55,7 +55,14 @@ n, converged = solver.solve(uu)
 assert(converged)
 print(f"Number of interations: {n:d}")
 
-with dolfinx.io.XDMFFile(mesh.comm, "res_2.xdmf", "w") as xdmf:
+with dolfinx.io.XDMFFile(mesh.comm, "res.xdmf", "w") as xdmf:
     xdmf.write_mesh(mesh)
     uu.name = "Rotation"
     xdmf.write_function(uu)
+
+poisson = dolfinx.fem.Function(V, dtype=np.complex128)
+from project import project
+project(Gamma21*mu1**2/(Gamma12*mu2**2), poisson)
+with dolfinx.io.XDMFFile(mesh.comm, "poisson.xdmf", "w") as xdmf:
+    xdmf.write_mesh(mesh)
+    xdmf.write_function(poisson)
