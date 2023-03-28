@@ -2,7 +2,7 @@ import dolfinx
 from mpi4py import MPI
 import numpy as np
 LL,H = 16,16
-mesh = dolfinx.mesh.create_rectangle(MPI.COMM_WORLD, [[0,0], [LL,H]], [100, 100])
+mesh = dolfinx.mesh.create_rectangle(MPI.COMM_WORLD, [[0,0], [LL,H]], [200, 200])
 num_cells = mesh.topology.index_map(2).size_local
 h = dolfinx.cpp.mesh.h(mesh, 2, range(num_cells))
 h = h.max()
@@ -24,10 +24,10 @@ mu2_p = -ufl.sin(uu) + beta*ufl.cos(uu)
 Gamma12 = -mu1_p / mu2
 Gamma21 = mu2_p / mu1
 Gamma = ufl.as_tensor(((-Gamma21, 0.), (0., Gamma12)))
-delta = np.sqrt(h) #1e-2
+delta = np.sqrt(h) #h #np.sqrt(h) #1e-2
 Gamma += ufl.as_tensor(((delta*1j, 0), (0, delta*1j)))
 #test
-Gamma = ufl.as_tensor(((Gamma21, 0.), (0., Gamma12)))
+#Gamma = ufl.as_tensor(((Gamma21, 0.), (0., Gamma12)))
 
 #Bilinear form
 v = ufl.TestFunction(V)
@@ -58,7 +58,7 @@ n, converged = solver.solve(uu)
 assert(converged)
 print(f"Number of interations: {n:d}")
 
-with dolfinx.io.XDMFFile(mesh.comm, "res_2.xdmf", "w") as xdmf:
+with dolfinx.io.XDMFFile(mesh.comm, "res.xdmf", "w") as xdmf:
     xdmf.write_mesh(mesh)
     uu.name = "Rotation"
     xdmf.write_function(uu)
