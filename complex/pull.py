@@ -3,6 +3,9 @@ from mpi4py import MPI
 import numpy as np
 LL,H = 16,16
 mesh = dolfinx.mesh.create_rectangle(MPI.COMM_WORLD, [[0,0], [LL,H]], [100, 100])
+num_cells = mesh.topology.index_map(2).size_local
+h = dolfinx.cpp.mesh.h(mesh, 2, range(num_cells))
+h = h.max()
 V = dolfinx.fem.FunctionSpace(mesh, ("Lagrange", 1))
 
 from petsc4py import PETSc
@@ -21,10 +24,10 @@ mu2_p = -ufl.sin(uu) + beta*ufl.cos(uu)
 Gamma12 = -mu1_p / mu2
 Gamma21 = mu2_p / mu1
 Gamma = ufl.as_tensor(((-Gamma21, 0.), (0., Gamma12)))
-delta = 1e-2
+delta = np.sqrt(h) #1e-2
 Gamma += ufl.as_tensor(((delta*1j, 0), (0, delta*1j)))
 #test
-#Gamma = ufl.as_tensor(((Gamma21, 0.), (0., Gamma12)))
+Gamma = ufl.as_tensor(((Gamma21, 0.), (0., Gamma12)))
 
 #Bilinear form
 v = ufl.TestFunction(V)
@@ -32,7 +35,7 @@ a = ufl.inner(ufl.dot(Gamma, ufl.grad(uu)), ufl.grad(v)) * ufl.dx
 
 #Boundary conditions
 u_bc = dolfinx.fem.Function(V, dtype=np.complex128)
-val = 0.1
+val = 0.45
 #xi = lambda x: val * x[1]/H*2 if np.where(x[1] < H/2) else val * (2 - x[1]/H*2)
 xi = lambda x: -4*val/H**2 * x[1] * (x[1] - H)
 u_bc.interpolate(xi)
@@ -55,7 +58,7 @@ n, converged = solver.solve(uu)
 assert(converged)
 print(f"Number of interations: {n:d}")
 
-with dolfinx.io.XDMFFile(mesh.comm, "res.xdmf", "w") as xdmf:
+with dolfinx.io.XDMFFile(mesh.comm, "res_2.xdmf", "w") as xdmf:
     xdmf.write_mesh(mesh)
     uu.name = "Rotation"
     xdmf.write_function(uu)
