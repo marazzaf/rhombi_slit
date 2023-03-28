@@ -28,10 +28,12 @@ delta = 1e-2
 Gamma += ufl.as_tensor(((delta*1j, 0), (0, delta*1j)))
 
 #Bilinear form
+u = ufl.TrialFunction(V)
 v = ufl.TestFunction(V)
-a = ufl.inner(ufl.dot(Gamma, ufl.grad(uu)), ufl.grad(v)) * ufl.dx
+f = dolfinx.fem.Constant(mesh, PETSc.ScalarType(0+0j))
+a = ufl.inner(ufl.dot(Gamma, ufl.grad(u)), ufl.grad(v)) * ufl.dx
+L = ufl.inner(f, v) * ufl.dx
 
-#Boundary conditions
 mesh.topology.create_connectivity(mesh.topology.dim-1, mesh.topology.dim)
 boundary_facets = dolfinx.mesh.exterior_facet_indices(mesh.topology)
 dofs_L = dolfinx.fem.locate_dofs_geometrical(V, lambda x: np.isclose(x[1], 0))
@@ -39,19 +41,10 @@ dofs_L = dolfinx.fem.locate_dofs_geometrical(V, lambda x: np.isclose(x[1], 0))
 bc1 = dolfinx.fem.dirichletbc(u_c, dofs_L) #boundary_dofs)
 dofs_R = dolfinx.fem.locate_dofs_geometrical(V, lambda x: np.isclose(x[1], LL))
 bc2 = dolfinx.fem.dirichletbc(u_c, dofs_R)
-
-#Nonlinear problem
-problem = dolfinx.fem.petsc.NonlinearProblem(a, uu, bcs=[bc1,bc2])
-solver = dolfinx.nls.petsc.NewtonSolver(MPI.COMM_WORLD, problem)
-solver.convergence_criterion = "incremental"
-solver.rtol = 1e-6
-solver.report = True
-#dolfinx.log.set_log_level(log.LogLevel.INFO)
-n, converged = solver.solve(uu)
-assert(converged)
-print(f"Number of interations: {n:d}")
+problem = dolfinx.fem.petsc.LinearProblem(a, L, bcs=[bc1,bc2])
+uh = problem.solve()
 
 with dolfinx.io.XDMFFile(mesh.comm, "res.xdmf", "w") as xdmf:
     xdmf.write_mesh(mesh)
-    uu.name = "Rotation"
-    xdmf.write_function(uu)
+    uh.name = "Rotation"
+    xdmf.write_function(uh)

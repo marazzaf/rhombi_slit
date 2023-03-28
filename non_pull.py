@@ -1,8 +1,7 @@
 from firedrake import *
 import sys
-import numpy as np
 
-mesh = Mesh('mesh.msh')
+mesh = Mesh('mesh_test.msh')
 L = 16
 H = 16
 
@@ -11,7 +10,7 @@ print('Nb dof: %i' % V.dim())
 
 #material parameters
 alpha = -.9
-beta = 0.1
+beta = 0
 
 #Complaince matrix
 uu = Function(V, name='solution')
@@ -34,6 +33,8 @@ aux1 = val * (2 - x[1]/H*2)
 aux2 = val * x[1]/H*2
 xi = conditional(lt(x[1], H/2), aux2, aux1)
 bcs = [DirichletBC(V, xi, 1)]
+
+uu.interpolate(xi)
 
 #Newton solver
 solve(a == 0, uu, bcs=bcs, solver_parameters={'snes_monitor': None, 'snes_max_it': 25})

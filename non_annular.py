@@ -1,6 +1,5 @@
 from firedrake import *
 import sys
-import numpy as np
 
 mesh = Mesh('mesh_test.msh')
 L = 16
