@@ -2,11 +2,11 @@ import dolfinx
 from mpi4py import MPI
 import numpy as np
 LL,H = 16,16
-mesh = dolfinx.mesh.create_rectangle(MPI.COMM_WORLD, [[0,0], [LL,H]], [200, 200])
+mesh = dolfinx.mesh.create_rectangle(MPI.COMM_WORLD, [[0,0], [LL,H]], [50, 50])
 num_cells = mesh.topology.index_map(2).size_local
 h = dolfinx.cpp.mesh.h(mesh, 2, range(num_cells))
 h = h.max()
-V = dolfinx.fem.FunctionSpace(mesh, ("Lagrange", 1))
+V = dolfinx.fem.FunctionSpace(mesh, ("Lagrange", 3))
 
 from petsc4py import PETSc
 print(PETSc.ScalarType)
