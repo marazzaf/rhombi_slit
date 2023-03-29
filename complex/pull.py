@@ -2,11 +2,12 @@ import dolfinx
 from mpi4py import MPI
 import numpy as np
 LL,H = 16,16
-mesh = dolfinx.mesh.create_rectangle(MPI.COMM_WORLD, [[0,0], [LL,H]], [50, 50])
+N = 160
+mesh = dolfinx.mesh.create_rectangle(MPI.COMM_WORLD, [[0,0], [LL,H]], [N, N])
 num_cells = mesh.topology.index_map(2).size_local
 h = dolfinx.cpp.mesh.h(mesh, 2, range(num_cells))
 h = h.max()
-V = dolfinx.fem.FunctionSpace(mesh, ("Lagrange", 3))
+V = dolfinx.fem.FunctionSpace(mesh, ("Lagrange", 1))
 
 from petsc4py import PETSc
 print(PETSc.ScalarType)
@@ -58,7 +59,7 @@ n, converged = solver.solve(uu)
 assert(converged)
 print(f"Number of interations: {n:d}")
 
-with dolfinx.io.XDMFFile(mesh.comm, "res.xdmf", "w") as xdmf:
+with dolfinx.io.XDMFFile(mesh.comm, "conv_%i.xdmf" % N, "w") as xdmf:
     xdmf.write_mesh(mesh)
     uu.name = "Rotation"
     xdmf.write_function(uu)
