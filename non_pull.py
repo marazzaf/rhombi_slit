@@ -32,9 +32,12 @@ val = 0.45
 aux1 = val * (2 - x[1]/H*2)
 aux2 = val * x[1]/H*2
 xi = conditional(lt(x[1], H/2), aux2, aux1)
-bcs = [DirichletBC(V, xi, 1)]
+#bcs = [DirichletBC(V, xi, 1)]
+#test
+#xi = -4*val/H**2 * x[1] * (x[1] - H)
+bcs = [DirichletBC(V, xi, 2)]
 
-uu.interpolate(xi)
+uu.interpolate(Constant(0.1))
 
 #Newton solver
 solve(a == 0, uu, bcs=bcs, solver_parameters={'snes_monitor': None, 'snes_max_it': 25})
