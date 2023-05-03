@@ -2,7 +2,7 @@ from firedrake import *
 import sys
 import numpy as np
 
-mesh = Mesh('mesh_aux_pull.msh')
+mesh = Mesh('mesh.msh')
 L = 16
 H = 16
 
@@ -10,15 +10,8 @@ V = FunctionSpace(mesh, "CG", 2)
 print('Nb dof: %i' % V.dim())
 
 ##material parameters
-#ar = 1
-#lamda1 = .95
-#lamda2 = .95/ar
-#lamda3 = .05
-#lamda4 = .05/ar
-#alpha = ar*(lamda4 - lamda2)
-#beta = (lamda1 - lamda3)/ar
 alpha = -.9
-beta = .9
+beta = 0.
 
 #Complaince matrix
 uu = Function(V, name='solution')
@@ -34,14 +27,17 @@ Gamma = as_tensor(((-Gamma21, Constant(0)), (Constant(0), Gamma12)))
 v = TestFunction(V)
 #a = inner(dot(Gamma, grad(uu)), grad(v)) * dx
 a = inner(dot(Gamma, grad(uu)), dot(Gamma, grad(v))) * dx
+a += sqrt(0.06) * inner(grad(uu), grad(v)) * dx
 
 
 #Dirichlet BC
+val = 0.45
 x = SpatialCoordinate(mesh)
-aux1 = 0.74 * (2 - x[1]/H*2)
-aux2 = 0.74 * x[1]/H*2
-xi = conditional(lt(x[1], H/2), aux2, aux1)
-bcs = [DirichletBC(V, xi, 1)]
+aux1 = val * (2 - x[1]/H*2)
+aux2 = val * x[1]/H*2
+#xi = conditional(lt(x[1], H/2), aux2, aux1)
+xi = -4*val/H**2 * x[1] * (x[1] - H)
+bcs = [DirichletBC(V, xi, 2)]
 
 #Newton solver
 solve(a == 0, uu, bcs=bcs, solver_parameters={'snes_monitor': None, 'snes_max_it': 25})

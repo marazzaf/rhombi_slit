@@ -15,7 +15,7 @@ assert np.dtype(PETSc.ScalarType).kind == 'c'
 
 import ufl
 alpha = -.9
-beta = 0.2
+beta = 0.
 uu = dolfinx.fem.Function(V, dtype=np.complex128)
 uu.interpolate(lambda x:0*x[0] + 0.1+0j)
 mu1 = ufl.cos(uu) - alpha*ufl.sin(uu)
