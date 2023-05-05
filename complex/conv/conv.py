@@ -3,7 +3,7 @@ from mpi4py import MPI
 import numpy as np
 LL,H = 1,1
 N = 20 #10 #20 #40
-mesh = dolfinx.mesh.create_rectangle(MPI.COMM_WORLD, [[0,0], [LL,H]], [N, N])
+mesh = dolfinx.mesh.create_rectangle(MPI.COMM_WORLD, [[0,0], [LL,H]], [N, N], diagonal=dolfinx.cpp.mesh.DiagonalType.crossed)
 num_cells = mesh.topology.index_map(2).size_local
 h = dolfinx.cpp.mesh.h(mesh, 2, range(num_cells))
 h = h.max()
@@ -22,25 +22,28 @@ v = ufl.TestFunction(V)
 a = ufl.inner(ufl.dot(Gamma, ufl.grad(u)), ufl.grad(v)) * ufl.dx
 
 #linear form
-aux.interpolate(lambda x: 2*x[0] + 1 + 0*1j)
+aux.interpolate(lambda x: -(2*x[0] + 1 + 0*1j))
 L = ufl.inner(aux, v) * ufl.dx
 
 #Boundary conditions
 u_bc = dolfinx.fem.Function(V, dtype=np.complex128)
 xi = lambda x: 0.5 * (x[0]*x[0] + x[1]*x[1]) + 0*1j
 u_bc.interpolate(xi)
-facets = dolfinx.mesh.locate_entities_boundary(mesh, mesh.topology.dim-1, lambda x: np.full(x.shape[1], True))
-dofs = dolfinx.fem.locate_dofs_topological(V, mesh.topology.dim-1, facets)
-bc = dolfinx.fem.dirichletbc(u_bc, dofs)
+mesh.topology.create_connectivity(1, 2)
+boundary_facets = dolfinx.mesh.exterior_facet_indices(mesh.topology)
+boundary_dofs = dolfinx.fem.locate_dofs_topological(V, 1, boundary_facets)
+bc = dolfinx.fem.dirichletbc(u_bc, boundary_dofs)
 
 #Linear problem
 problem = dolfinx.fem.petsc.LinearProblem(a, L, bcs=[bc], petsc_options={"ksp_type": "preonly", "pc_type": "lu"})
 uh = problem.solve()
 
+uR = dolfinx.fem.Function(V, dtype=np.complex128)
+uR.x.array[:] = uh.x.array.real
 with dolfinx.io.XDMFFile(mesh.comm, "conv_%i.xdmf" % N, "w") as xdmf:
     xdmf.write_mesh(mesh)
-    uh.name = "Approx"
-    xdmf.write_function(uh)
+    uR.name = "Approx"
+    xdmf.write_function(uR)
 
 with dolfinx.io.XDMFFile(mesh.comm, "ref_%i.xdmf" % N, "w") as xdmf:
     xdmf.write_mesh(mesh)
@@ -76,6 +79,4 @@ def error_L2(uh, u_ex, degree_raise=3):
     error_global = mesh.comm.allreduce(error_local, op=MPI.SUM)
     return np.sqrt(error_global)
 
-uR = dolfinx.fem.Function(V, dtype=np.complex128)
-uR.x.array[:] = uh.x.array.real
 print(error_L2(uR, xi))
