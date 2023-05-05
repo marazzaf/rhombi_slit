@@ -48,7 +48,7 @@ with dolfinx.io.XDMFFile(mesh.comm, "conv_%i.xdmf" % N, "w") as xdmf:
 with dolfinx.io.XDMFFile(mesh.comm, "ref_%i.xdmf" % N, "w") as xdmf:
     xdmf.write_mesh(mesh)
     xi.name = "Ref"
-    xdmf.write_function(uh)
+    xdmf.write_function(u_bc)
 
 def error_L2(uh, u_ex, degree_raise=3):
     # Create higher order function space
