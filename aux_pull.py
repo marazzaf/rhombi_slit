@@ -2,7 +2,7 @@ from firedrake import *
 import sys
 import numpy as np
 
-mesh = Mesh('mesh_aux_pull.msh')
+mesh = Mesh('mesh_aux.msh') #
 L = 16
 H = 16
 
@@ -10,15 +10,8 @@ V = FunctionSpace(mesh, "CG", 2)
 print('Nb dof: %i' % V.dim())
 
 ##material parameters
-#ar = 1
-#lamda1 = .95
-#lamda2 = .95/ar
-#lamda3 = .05
-#lamda4 = .05/ar
-#alpha = ar*(lamda4 - lamda2)
-#beta = (lamda1 - lamda3)/ar
 alpha = -.9
-beta = .9
+beta = 0
 
 #Complaince matrix
 uu = Function(V, name='solution')
