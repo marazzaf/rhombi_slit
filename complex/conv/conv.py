@@ -2,7 +2,7 @@ import dolfinx
 from mpi4py import MPI
 import numpy as np
 LL,H = 1,1
-N = 20 #10 #20 #40
+N = 40 #10 #20 #40
 mesh = dolfinx.mesh.create_rectangle(MPI.COMM_WORLD, [[0,0], [LL,H]], [N, N], diagonal=dolfinx.cpp.mesh.DiagonalType.crossed)
 num_cells = mesh.topology.index_map(2).size_local
 h = dolfinx.cpp.mesh.h(mesh, 2, range(num_cells))
@@ -22,8 +22,9 @@ v = ufl.TestFunction(V)
 a = ufl.inner(ufl.dot(Gamma, ufl.grad(u)), ufl.grad(v)) * ufl.dx
 
 #linear form
-aux.interpolate(lambda x: -(2*x[0] + 1 + 0*1j))
-L = ufl.inner(aux, v) * ufl.dx
+truc = dolfinx.fem.Function(V, dtype=np.complex128)
+truc.interpolate(lambda x: -(2*x[0] + 1 + 0*1j))
+L = ufl.inner(truc, v) * ufl.dx
 
 #Boundary conditions
 u_bc = dolfinx.fem.Function(V, dtype=np.complex128)
