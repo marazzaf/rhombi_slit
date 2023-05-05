@@ -2,7 +2,7 @@ import dolfinx
 from mpi4py import MPI
 import numpy as np
 LL,H = 1,1
-N = 40 #10 #20 #40
+N = 20 #10 #20 #40
 mesh = dolfinx.mesh.create_rectangle(MPI.COMM_WORLD, [[0,0], [LL,H]], [N, N])
 num_cells = mesh.topology.index_map(2).size_local
 h = dolfinx.cpp.mesh.h(mesh, 2, range(num_cells))
@@ -76,4 +76,6 @@ def error_L2(uh, u_ex, degree_raise=3):
     error_global = mesh.comm.allreduce(error_local, op=MPI.SUM)
     return np.sqrt(error_global)
 
-print(error_L2(uh, xi))
+uR = dolfinx.fem.Function(V, dtype=np.complex128)
+uR.x.array[:] = uh.x.array.real
+print(error_L2(uR, xi))
