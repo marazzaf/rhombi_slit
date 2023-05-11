@@ -2,7 +2,7 @@ import dolfinx
 from mpi4py import MPI
 import numpy as np
 LL,H = 1,1
-N = 40 #10 #20 #40
+N = 160 #10 #20 #40 #80 #160
 mesh = dolfinx.mesh.create_rectangle(MPI.COMM_WORLD, [[0,0], [LL,H]], [N, N], diagonal=dolfinx.cpp.mesh.DiagonalType.crossed)
 num_cells = mesh.topology.index_map(2).size_local
 h = dolfinx.cpp.mesh.h(mesh, 2, range(num_cells))
@@ -11,9 +11,10 @@ V = dolfinx.fem.FunctionSpace(mesh, ("Lagrange", 1))
 
 import ufl
 aux = dolfinx.fem.Function(V, dtype=np.complex128)
+print('nb dof: %i' % aux.vector.size)
 aux.interpolate(lambda x: x[0])
 Gamma = ufl.as_tensor(((aux, 0.), (0., 1)))
-delta = np.sqrt(h) #h #np.sqrt(h) #1e-2
+delta = h #h #np.sqrt(h) #1e-2
 Gamma += delta * ufl.as_tensor(((1j, 0), (0, 1j)))
 
 #Bilinear form
@@ -80,4 +81,4 @@ def error_L2(uh, u_ex, degree_raise=3):
     error_global = mesh.comm.allreduce(error_local, op=MPI.SUM)
     return np.sqrt(error_global)
 
-print(error_L2(uR, xi))
+print('L2 error: %.3e' % error_L2(uR, xi).real)
