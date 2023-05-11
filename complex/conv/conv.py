@@ -2,7 +2,7 @@ import dolfinx
 from mpi4py import MPI
 import numpy as np
 LL,H = 1,1
-N = 160 #10 #20 #40 #80 #160
+N = 320 #10 #20 #40 #80 #160 #320
 mesh = dolfinx.mesh.create_rectangle(MPI.COMM_WORLD, [[0,0], [LL,H]], [N, N], diagonal=dolfinx.cpp.mesh.DiagonalType.crossed)
 num_cells = mesh.topology.index_map(2).size_local
 h = dolfinx.cpp.mesh.h(mesh, 2, range(num_cells))
@@ -14,7 +14,7 @@ aux = dolfinx.fem.Function(V, dtype=np.complex128)
 print('nb dof: %i' % aux.vector.size)
 aux.interpolate(lambda x: x[0])
 Gamma = ufl.as_tensor(((aux, 0.), (0., 1)))
-delta = h #h #np.sqrt(h) #1e-2
+delta = h*h #h #np.sqrt(h) #1e-2
 Gamma += delta * ufl.as_tensor(((1j, 0), (0, 1j)))
 
 #Bilinear form
