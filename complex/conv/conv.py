@@ -2,8 +2,8 @@ import dolfinx
 from mpi4py import MPI
 import numpy as np
 LL,H = 1,1
-N = 2 #10 #20 #40 #80 #160 #320
-infile = dolfinx.io.XDMFFile(MPI.COMM_WORLD, "./mesh.xdmf", "r")
+N = 5 #10 #20 #40 #80 #160 #320
+infile = dolfinx.io.XDMFFile(MPI.COMM_WORLD, "./mesh_2.xdmf", "r")
 mesh = infile.read_mesh(name="Grid")
 infile.close()
 #mesh = dolfinx.mesh.create_rectangle(MPI.COMM_WORLD, [[-LL,-H], [LL,H]], [N, N], diagonal=dolfinx.cpp.mesh.DiagonalType.crossed)
@@ -17,7 +17,7 @@ aux = dolfinx.fem.Function(V, dtype=np.complex128)
 print('nb dof: %i' % aux.vector.size)
 
 #matrix
-delta = 0 #h*h #h #np.sqrt(h) #h*h
+delta = 1e-3 * np.sqrt(h)  #h*h #h #np.sqrt(h) #h*h
 aux.interpolate(lambda x: x[0] * (1 + delta*np.sign(x[0]) * 1j))
 Gamma = ufl.as_tensor(((aux, 0.), (0., 1)))
 
@@ -50,8 +50,8 @@ uR = dolfinx.fem.Function(V, dtype=np.complex128)
 uR.x.array[:] = uh.x.array.real
 with dolfinx.io.XDMFFile(mesh.comm, "conv_%i.xdmf" % N, "w") as xdmf:
     xdmf.write_mesh(mesh)
-    uR.name = "Approx"
-    xdmf.write_function(uR)
+    uh.name = "Approx"
+    xdmf.write_function(uh)
 
 with dolfinx.io.XDMFFile(mesh.comm, "ref_%i.xdmf" % N, "w") as xdmf:
     xdmf.write_mesh(mesh)
