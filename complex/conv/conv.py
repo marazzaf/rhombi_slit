@@ -2,7 +2,7 @@ import dolfinx
 from mpi4py import MPI
 import numpy as np
 LL,H = 1,1
-N = 160 #10 #20 #40 #80 #160 #320
+N = 2 #10 #20 #40 #80 #160 #320
 infile = dolfinx.io.XDMFFile(MPI.COMM_WORLD, "./mesh.xdmf", "r")
 mesh = infile.read_mesh(name="Grid")
 infile.close()
@@ -17,7 +17,7 @@ aux = dolfinx.fem.Function(V, dtype=np.complex128)
 print('nb dof: %i' % aux.vector.size)
 
 #matrix
-delta = h*h #h #np.sqrt(h) #h*h
+delta = 0 #h*h #h #np.sqrt(h) #h*h
 aux.interpolate(lambda x: x[0] * (1 + delta*np.sign(x[0]) * 1j))
 Gamma = ufl.as_tensor(((aux, 0.), (0., 1)))
 
