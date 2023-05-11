@@ -3,7 +3,10 @@ from mpi4py import MPI
 import numpy as np
 LL,H = 1,1
 N = 160 #10 #20 #40 #80 #160 #320
-mesh = dolfinx.mesh.create_rectangle(MPI.COMM_WORLD, [[-LL,-H], [LL,H]], [N, N], diagonal=dolfinx.cpp.mesh.DiagonalType.crossed)
+infile = dolfinx.io.XDMFFile(MPI.COMM_WORLD, "./mesh.xdmf", "r")
+mesh = infile.read_mesh(name="Grid")
+infile.close()
+#mesh = dolfinx.mesh.create_rectangle(MPI.COMM_WORLD, [[-LL,-H], [LL,H]], [N, N], diagonal=dolfinx.cpp.mesh.DiagonalType.crossed)
 num_cells = mesh.topology.index_map(2).size_local
 h = dolfinx.cpp.mesh.h(mesh, 2, range(num_cells))
 h = h.max()
@@ -12,10 +15,12 @@ V = dolfinx.fem.FunctionSpace(mesh, ("Lagrange", 1))
 import ufl
 aux = dolfinx.fem.Function(V, dtype=np.complex128)
 print('nb dof: %i' % aux.vector.size)
-aux.interpolate(lambda x: x[0])
+
+#matrix
+delta = h*h #h #np.sqrt(h) #h*h
+aux.interpolate(lambda x: x[0] * (1 + delta*np.sign(x[0]) * 1j))
 Gamma = ufl.as_tensor(((aux, 0.), (0., 1)))
-delta = h*h #h #np.sqrt(h) #1e-2
-#Gamma += delta * ufl.as_tensor(((1j, 0), (0, 1j)))
+
 
 #Bilinear form
 u = ufl.TrialFunction(V)
@@ -24,12 +29,13 @@ a = ufl.inner(ufl.dot(Gamma, ufl.grad(u)), ufl.grad(v)) * ufl.dx
 
 #linear form
 truc = dolfinx.fem.Function(V, dtype=np.complex128)
-truc.interpolate(lambda x: -(2*x[0] + 1 + 0*1j) * np.sign(x[0]))
+truc.interpolate(lambda x: -2*x[0] * np.sign(x[0]) +0*1j)
+
 L = ufl.inner(truc, v) * ufl.dx
 
 #Boundary conditions
 u_bc = dolfinx.fem.Function(V, dtype=np.complex128)
-xi = lambda x: 0.5 * (x[0]*x[0] + x[1]*x[1]) * np.sign(x[0]) + 0*1j
+xi = lambda x: 0.5 * x[0]*x[0] * np.sign(x[0]) + 0*1j
 u_bc.interpolate(xi)
 mesh.topology.create_connectivity(1, 2)
 boundary_facets = dolfinx.mesh.exterior_facet_indices(mesh.topology)
