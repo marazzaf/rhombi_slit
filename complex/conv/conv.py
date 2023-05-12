@@ -17,8 +17,10 @@ aux = dolfinx.fem.Function(V, dtype=np.complex128)
 print('nb dof: %i' % aux.vector.size)
 
 #matrix
-delta = 1e-3 * np.sqrt(h)  #h*h #h #np.sqrt(h) #h*h
+delta = 1e-3 * np.sqrt(h)  #h #np.sqrt(h)
 aux.interpolate(lambda x: x[0] * (1 + delta*np.sign(x[0]) * 1j))
+#test
+#aux.interpolate(lambda x: x[0] + delta*np.sign(x[0]))
 Gamma = ufl.as_tensor(((aux, 0.), (0., 1)))
 
 
