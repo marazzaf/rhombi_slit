@@ -13,4 +13,4 @@ def create_mesh(mesh, cell_type, prune_z=False):
 #meshio.write("facet_mesh.xdmf", line_mesh)
 
 triangle_mesh = create_mesh(mesh_from_file, "triangle", prune_z=True)
-meshio.write("mesh_5.xdmf", triangle_mesh)
+meshio.write("mesh_6.xdmf", triangle_mesh)
