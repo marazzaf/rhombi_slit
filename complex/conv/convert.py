@@ -1,5 +1,5 @@
 import meshio
-mesh_from_file = meshio.read("mesh_1.msh")
+mesh_from_file = meshio.read("mesh.msh")
 
 import numpy
 def create_mesh(mesh, cell_type, prune_z=False):
@@ -9,8 +9,8 @@ def create_mesh(mesh, cell_type, prune_z=False):
     out_mesh = meshio.Mesh(points=points, cells={cell_type: cells}, cell_data={"name_to_read":[cell_data]})
     return out_mesh
 
-line_mesh = create_mesh(mesh_from_file, "line", prune_z=True)
-meshio.write("facet_mesh.xdmf", line_mesh)
+#line_mesh = create_mesh(mesh_from_file, "line", prune_z=True)
+#meshio.write("facet_mesh.xdmf", line_mesh)
 
 triangle_mesh = create_mesh(mesh_from_file, "triangle", prune_z=True)
-meshio.write("mesh_1.xdmf", triangle_mesh)
+meshio.write("mesh_5.xdmf", triangle_mesh)
