@@ -1,7 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 
-data = np.loadtxt('res.txt', delimiter=',', comments='#')
+data = np.loadtxt('res_grad.txt', delimiter=',', comments='#')
 
 n = data[:,0]
 err = data[:,1]
