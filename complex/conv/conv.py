@@ -2,7 +2,7 @@ import dolfinx
 from mpi4py import MPI
 import numpy as np
 LL,H = 1,1
-N = 6 #10 #20 #40 #80 #160 #320
+N = 2 #10 #20 #40 #80 #160 #320
 infile = dolfinx.io.XDMFFile(MPI.COMM_WORLD, "./mesh_%i.xdmf" % N, "r")
 mesh = infile.read_mesh(name="Grid")
 infile.close()
@@ -50,15 +50,15 @@ uh = problem.solve()
 
 uR = dolfinx.fem.Function(V, dtype=np.complex128)
 uR.x.array[:] = uh.x.array.real
-with dolfinx.io.XDMFFile(mesh.comm, "conv_%i.xdmf" % N, "w") as xdmf:
-    xdmf.write_mesh(mesh)
-    uh.name = "Approx"
-    xdmf.write_function(uh)
-
-with dolfinx.io.XDMFFile(mesh.comm, "ref_%i.xdmf" % N, "w") as xdmf:
-    xdmf.write_mesh(mesh)
-    xi.name = "Ref"
-    xdmf.write_function(u_bc)
+#with dolfinx.io.XDMFFile(mesh.comm, "conv_%i.xdmf" % N, "w") as xdmf:
+#    xdmf.write_mesh(mesh)
+#    uh.name = "Approx"
+#    xdmf.write_function(uh)
+#
+#with dolfinx.io.XDMFFile(mesh.comm, "ref_%i.xdmf" % N, "w") as xdmf:
+#    xdmf.write_mesh(mesh)
+#    xi.name = "Ref"
+#    xdmf.write_function(u_bc)
 
 def error_L2(uh, u_ex, degree_raise=3):
     # Create higher order function space
@@ -74,7 +74,7 @@ def error_L2(uh, u_ex, degree_raise=3):
     # is a ufl expression or a python lambda function
     u_ex_W = dolfinx.fem.Function(W)
     if isinstance(u_ex, ufl.core.expr.Expr):
-        u_expr = Expression(u_ex, W.element.interpolation_points)
+        u_expr = Expression(dot(Gamma,u_ex), W.element.interpolation_points)
         u_ex_W.interpolate(u_expr)
     else:
         u_ex_W.interpolate(u_ex)
@@ -90,3 +90,32 @@ def error_L2(uh, u_ex, degree_raise=3):
     return np.sqrt(error_global)
 
 print('L2 error: %.3e' % error_L2(uR, xi).real)
+
+aux.interpolate(lambda x: x[0])
+Gamma = ufl.as_tensor(((aux, 0.), (0., 1)))
+def error_grad(uh, u_ex, degree_raise=3):
+    # Create higher order function space
+    degree = uh.function_space.ufl_element().degree()
+    family = uh.function_space.ufl_element().family()
+    mesh = uh.function_space.mesh
+    W = dolfinx.fem.FunctionSpace(mesh, (family, degree+ degree_raise))
+
+    # Interpolate exact solution, special handling if exact solution
+    # is a ufl expression or a python lambda function
+    u_ex_W = dolfinx.fem.Function(W)
+    if isinstance(u_ex, ufl.core.expr.Expr):
+        u_expr = Expression(dot(Gamma,u_ex), W.element.interpolation_points)
+        u_ex_W.interpolate(u_expr)
+    else:
+        u_ex_W.interpolate(u_ex)
+    
+    # Compute the error in the higher order function space
+    e_W = ufl.dot(Gamma, ufl.grad(uh)) - ufl.dot(Gamma, ufl.grad(u_ex_W))
+    
+    # Integrate the error
+    error = dolfinx.fem.form(ufl.inner(e_W, e_W) * ufl.dx)
+    error_local = dolfinx.fem.assemble_scalar(error)
+    error_global = mesh.comm.allreduce(error_local, op=MPI.SUM)
+    return np.sqrt(error_global)
+
+print('Grad error: %.3e' % error_grad(uR, xi).real)
