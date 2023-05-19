@@ -5,7 +5,7 @@ mesh = Mesh('mesh_test.msh')
 L = 16
 H = 16
 
-V = FunctionSpace(mesh, "CG", 2)
+V = FunctionSpace(mesh, "CG", 1)
 print('Nb dof: %i' % V.dim())
 
 #material parameters
