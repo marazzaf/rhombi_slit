@@ -40,7 +40,8 @@ xi_D = -4*val/H**2 * x[1] * (x[1] - H)
 bcs = [DirichletBC(V, xi_D, 2)]
 
 #Newton solver
-solve(a == 0, xi, bcs=bcs, solver_parameters={'snes_monitor': None, 'snes_max_it': 25})
+nullspace = VectorSpaceBasis(constant=True)
+solve(a == 0, xi, bcs=bcs, nullspace=nullspace, solver_parameters={'snes_monitor': None, 'snes_max_it': 25})
 
 final = File('aux_pull_sol.pvd')
 final.write(xi)
@@ -50,14 +51,16 @@ aux = interpolate(Gamma21*mu1**2/(Gamma12*mu2**2), V)
 poisson.write(aux)
 
 #Recovering global rotation
+V = FunctionSpace(mesh, "CG", 2)
 u = TrialFunction(V)
+v = TestFunction(V)
 a = inner(grad(u), grad(v)) * dx
 #rhs
 Gamma = as_tensor(((Constant(0), Gamma12,), (Gamma21, Constant(0))))
 l = inner(dot(Gamma, grad(xi)), grad(v)) * dx
 
 gamma = Function(V, name='gamma')
-solve(a == l, gamma)
+solve(a == l, gamma, nullspace=nullspace)
 
 rotation = File('rot.pvd')
 rotation.write(gamma)
@@ -66,14 +69,14 @@ rotation.write(gamma)
 A = as_tensor(((mu1, Constant(0)), (Constant(0), mu2)))
 R = as_tensor(((cos(gamma), -sin(gamma)), (sin(gamma), cos(gamma))))
 
-W = VectorFunctionSpace(mesh, 'CG', 1)
+W = VectorFunctionSpace(mesh, 'CG', 2)
 u = TrialFunction(W)
 v = TestFunction(W)
 a = inner(grad(u), grad(v)) * dx
 l = inner(dot(R, A), grad(v))  * dx
 
 y = Function(W, name='yeff')
-solve(a == l, y)
+solve(a == l, y, nullspace=nullspace)
 
 disp = File('disp.pvd')
 disp.write(y)
