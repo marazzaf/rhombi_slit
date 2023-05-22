@@ -14,7 +14,7 @@ alpha = -.9
 beta = 0.9
 
 #Complaince matrix
-xi = Function(V, name='solution')
+xi = Function(V, name='xi')
 mu1 = cos(xi) - alpha*sin(xi)
 mu1_p = -sin(xi) - alpha*cos(xi)
 mu2 = cos(xi) + beta*sin(xi)
@@ -31,24 +31,23 @@ a = inner(dot(Gamma, grad(xi)), grad(v)) * dx
 
 
 #Dirichlet BC
-val = 0.45
+val = 0.74
 x = SpatialCoordinate(mesh)
 aux1 = val * (2 - x[1]/H*2)
 aux2 = val * x[1]/H*2
-#xi_D = conditional(lt(x[1], H/2), aux2, aux1)
-xi_D = -4*val/H**2 * x[1] * (x[1] - H)
+xi_D = conditional(lt(x[1], H/2), aux2, aux1)
 bcs = [DirichletBC(V, xi_D, 2)]
 
 #Newton solver
 nullspace = VectorSpaceBasis(constant=True)
-solve(a == 0, xi, bcs=bcs, nullspace=nullspace, solver_parameters={'snes_monitor': None, 'snes_max_it': 25})
+solve(a == 0, xi, bcs=bcs, solver_parameters={'snes_monitor': None, 'snes_max_it': 25})
 
 final = File('aux_pull_sol.pvd')
 final.write(xi)
 
-poisson = File('aux_pull_poisson.pvd')
-aux = interpolate(Gamma21*mu1**2/(Gamma12*mu2**2), V)
-poisson.write(aux)
+#poisson = File('aux_pull_poisson.pvd')
+#aux = interpolate(Gamma21*mu1**2/(Gamma12*mu2**2), V)
+#poisson.write(aux)
 
 #Recovering global rotation
 V = FunctionSpace(mesh, "CG", 1) #2
