@@ -51,7 +51,7 @@ aux = interpolate(Gamma21*mu1**2/(Gamma12*mu2**2), V)
 poisson.write(aux)
 
 #Recovering global rotation
-V = FunctionSpace(mesh, "CG", 2)
+V = FunctionSpace(mesh, "CG", 1) #2
 u = TrialFunction(V)
 v = TestFunction(V)
 a = inner(grad(u), grad(v)) * dx
@@ -69,7 +69,7 @@ rotation.write(gamma)
 A = as_tensor(((mu1, Constant(0)), (Constant(0), mu2)))
 R = as_tensor(((cos(gamma), -sin(gamma)), (sin(gamma), cos(gamma))))
 
-W = VectorFunctionSpace(mesh, 'CG', 2)
+W = VectorFunctionSpace(mesh, 'CG', 1) #2
 u = TrialFunction(W)
 v = TestFunction(W)
 a = inner(grad(u), grad(v)) * dx
