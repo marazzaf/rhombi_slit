@@ -2,11 +2,10 @@ import dolfinx
 from mpi4py import MPI
 import numpy as np
 LL,H = 1,1
-N = 6 #10 #20 #40 #80 #160 #320
+N = 2 #1-6
 infile = dolfinx.io.XDMFFile(MPI.COMM_WORLD, "./mesh_%i.xdmf" % N, "r")
 mesh = infile.read_mesh(name="Grid")
 infile.close()
-#mesh = dolfinx.mesh.create_rectangle(MPI.COMM_WORLD, [[-LL,-H], [LL,H]], [N, N], diagonal=dolfinx.cpp.mesh.DiagonalType.crossed)
 num_cells = mesh.topology.index_map(2).size_local
 h = dolfinx.cpp.mesh.h(mesh, 2, range(num_cells))
 h = h.max()

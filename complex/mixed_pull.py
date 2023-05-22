@@ -2,7 +2,7 @@ import dolfinx
 from mpi4py import MPI
 import numpy as np
 LL,H = 16,16
-N = 160
+N = 80 #160
 mesh = dolfinx.mesh.create_rectangle(MPI.COMM_WORLD, [[0,0], [LL,H]], [N, N])
 num_cells = mesh.topology.index_map(2).size_local
 h = dolfinx.cpp.mesh.h(mesh, 2, range(num_cells))
@@ -18,10 +18,15 @@ alpha = -1.6
 beta = 0.4
 uu = dolfinx.fem.Function(V, dtype=np.complex128)
 uu.interpolate(lambda x:0*x[0] + 0.1+0j)
-mu1 = ufl.cos(uu) - alpha*ufl.sin(uu)
-mu1_p = -ufl.sin(uu) - alpha*ufl.cos(uu)
-mu2 = ufl.cos(uu) + beta*ufl.sin(uu)
-mu2_p = -ufl.sin(uu) + beta*ufl.cos(uu)
+uR = ufl.real(uu)
+#mu1 = ufl.cos(uu) - alpha*ufl.sin(uu)
+#mu1_p = -ufl.sin(uu) - alpha*ufl.cos(uu)
+#mu2 = ufl.cos(uu) + beta*ufl.sin(uu)
+#mu2_p = -ufl.sin(uu) + beta*ufl.cos(uu)
+mu1 = ufl.cos(uR) - alpha*ufl.sin(uR)
+mu1_p = -ufl.sin(uR) - alpha*ufl.cos(uR)
+mu2 = ufl.cos(uR) + beta*ufl.sin(uR)
+mu2_p = -ufl.sin(uR) + beta*ufl.cos(uR)
 Gamma12 = -mu1_p / mu2
 Gamma21 = mu2_p / mu1
 Gamma = ufl.as_tensor(((-Gamma21, 0.), (0., Gamma12)))
@@ -59,10 +64,29 @@ n, converged = solver.solve(uu)
 assert(converged)
 print(f"Number of interations: {n:d}")
 
-with dolfinx.io.XDMFFile(mesh.comm, "conv_%i.xdmf" % N, "w") as xdmf:
+aux = dolfinx.fem.form(ufl.action(a,uu))
+print(dolfinx.fem.assemble_vector(aux))
+
+with dolfinx.io.XDMFFile(mesh.comm, "conv_%i_test.xdmf" % N, "w") as xdmf:
     xdmf.write_mesh(mesh)
     uu.name = "Rotation"
     xdmf.write_function(uu)
+
+#test
+uR = dolfinx.fem.Function(V, dtype=np.complex128)
+uR.x.array[:] = uu.x.array.real
+mu1 = ufl.cos(uR) - alpha*ufl.sin(uR)
+mu1_p = -ufl.sin(uR) - alpha*ufl.cos(uR)
+mu2 = ufl.cos(uR) + beta*ufl.sin(uR)
+mu2_p = -ufl.sin(uR) + beta*ufl.cos(uR)
+Gamma12 = -mu1_p / mu2
+Gamma21 = mu2_p / mu1
+Gamma = ufl.as_tensor(((-Gamma21, 0.), (0., Gamma12)))
+a = ufl.inner(ufl.dot(Gamma, ufl.grad(uR)), ufl.grad(v)) * ufl.dx
+aux = dolfinx.fem.form(ufl.action(a,uR))
+print(dolfinx.fem.assemble_scalar(aux))
+import sys
+sys.exit()
 
 poisson = dolfinx.fem.Function(V, dtype=np.complex128)
 from project import project
