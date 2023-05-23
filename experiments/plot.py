@@ -3,9 +3,9 @@ import matplotlib.pyplot as plt
 import sys
 
 #Load data
-data = np.loadtxt('test.txt', comments='#')
+data = np.loadtxt('non_pull.txt', comments='#')
 
-#Plot data
+##Plot data
 #plt.scatter(data[:,0], data[:,1], c=data[:,2])
 #plt.colorbar()
 #plt.show()
@@ -32,8 +32,7 @@ interp = LinearNDInterpolator(data[:,:2], data[:,2])
 x = points[hull.vertices,0]
 y = points[hull.vertices,1]
 res = np.array([x,y, interp(x,y)]) 
-print(res.shape)
-sys.exit()
+#sys.exit()
 
 #Plotting the linear interpolation
 x = data[:,0]
