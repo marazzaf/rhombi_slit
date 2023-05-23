@@ -54,7 +54,8 @@ dofs_R = dolfinx.fem.locate_dofs_geometrical(V, lambda x: np.isclose(x[0], LL))
 bc2 = dolfinx.fem.dirichletbc(u_bc, dofs_R)
 
 #Nonlinear problem
-problem = dolfinx.fem.petsc.NonlinearProblem(a, uu, bcs=[bc1,bc2])
+J = dolfinx.fem.form(ufl.derivative(a, uu))
+problem = dolfinx.fem.petsc.NonlinearProblem(a, uu, bcs=[bc1,bc2], J=J)
 solver = dolfinx.nls.petsc.NewtonSolver(MPI.COMM_WORLD, problem)
 solver.convergence_criterion = "incremental"
 solver.rtol = 1e-6
