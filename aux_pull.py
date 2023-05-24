@@ -31,8 +31,8 @@ a = inner(dot(Gamma, grad(xi)), grad(v)) * dx
 
 
 #Dirichlet BC
-val_max = 0.8416
-val_min = 0.0831 #finish updating BC
+val_max = 0.74 #0.8416
+val_min = 0.0831
 x = SpatialCoordinate(mesh)
 aux1 = (val_max - val_min) * (2 - x[1]/H*2) + val_min
 aux2 = (val_max - val_min)  * x[1]/H*2 + val_min
