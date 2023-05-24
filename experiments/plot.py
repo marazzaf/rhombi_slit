@@ -3,7 +3,10 @@ import matplotlib.pyplot as plt
 import sys
 
 #Load data
-data = np.loadtxt('non_pull.txt', comments='#')
+data = np.loadtxt('aux_pull.txt', comments='#')
+
+print(min(data[:,2]))
+sys.exit()
 
 ##Plot data
 #plt.scatter(data[:,0], data[:,1], c=data[:,2])

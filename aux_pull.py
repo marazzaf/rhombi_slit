@@ -31,10 +31,11 @@ a = inner(dot(Gamma, grad(xi)), grad(v)) * dx
 
 
 #Dirichlet BC
-val = 0.74
+val_max = 0.8416
+val_min = 0.0831 #finish updating BC
 x = SpatialCoordinate(mesh)
-aux1 = val * (2 - x[1]/H*2)
-aux2 = val * x[1]/H*2
+aux1 = (val_max - val_min) * (2 - x[1]/H*2) + val_min
+aux2 = (val_max - val_min)  * x[1]/H*2 + val_min
 xi_D = conditional(lt(x[1], H/2), aux2, aux1)
 bcs = [DirichletBC(V, xi_D, 2)]
 
