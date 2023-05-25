@@ -38,14 +38,14 @@ a = ufl.inner(ufl.dot(Gamma, ufl.grad(uu)), ufl.grad(v)) * ufl.dx
 u_bc = dolfinx.fem.Function(V, dtype=np.complex128)
 val_max = 0.8416
 val_min = 0.0831
-xi_u = lambda x: (val_max-val_min) * x[1]/H*2 + val_min #if np.where(x[1] < H/2)
-xi_d =lambda x:  (val_max-val_min) * (2 - x[1]/H*2) + val_min
-#xi = lambda x: -4*val/H**2 * x[1] * (x[1] - H)
+#xi_u = lambda x: (val_max-val_min) * x[1]/H*2 + val_min #if np.where(x[1] < H/2)
+#xi_d =lambda x:  (val_max-val_min) * (2 - x[1]/H*2) + val_min
+xi = lambda x: -4*(val_max-val_min)/H**2 * x[1] * (x[1] - H) + val_min
 mesh.topology.create_connectivity(mesh.topology.dim-1, mesh.topology.dim)
 boundary_facets = dolfinx.mesh.exterior_facet_indices(mesh.topology)
 tol = 1
-dofs_L = dolfinx.fem.locate_dofs_geometrical(V, lambda x: np.isclose(x[0], 0) and np.any(x[1]  > H/2))
-u_bc.interpolate(xi_u)
+dofs_L = dolfinx.fem.locate_dofs_geometrical(V, lambda x: np.isclose(x[0], 0))
+u_bc.interpolate(xi)
 bc1 = dolfinx.fem.dirichletbc(u_bc, dofs_L)
 dofs_R = dolfinx.fem.locate_dofs_geometrical(V, lambda x: np.isclose(x[0], LL))
 u_bc.interpolate(xi)
