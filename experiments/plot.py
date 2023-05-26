@@ -3,15 +3,15 @@ import matplotlib.pyplot as plt
 import sys
 
 #Load data
-data = np.loadtxt('aux_pull.txt', comments='#')
+data = np.loadtxt('non_pull.txt', comments='#')
 
-print(min(data[:,2]))
-sys.exit()
+#print(min(data[:,2]))
+#sys.exit()
 
-##Plot data
-#plt.scatter(data[:,0], data[:,1], c=data[:,2])
-#plt.colorbar()
-#plt.show()
+#Plot data
+plt.scatter(data[:,0], data[:,1], c=data[:,2])
+plt.colorbar()
+plt.show()
 #sys.exit()
 
 #Computing the convex Hull
@@ -30,6 +30,8 @@ hull = ConvexHull(points)
 #Creating the Linear interpolation
 from scipy.interpolate import LinearNDInterpolator
 interp = LinearNDInterpolator(data[:,:2], data[:,2])
+#modify that with position in ref config?
+#thus change #data[:,:2]...
 
 #Getting the BC
 x = points[hull.vertices,0]
@@ -44,7 +46,7 @@ y = data[:,1]
 Y = np.linspace(min(y), max(y))
 X, Y = np.meshgrid(X, Y)
 Z = interp(X, Y)
-plt.pcolormesh(X, Y, Z, shading='auto')
+plt.pcolormesh(X, Y, Z, shading='auto', cmap='jet')
 #plt.plot(x, y, "ok", label="input point")
 plt.legend()
 plt.colorbar()
