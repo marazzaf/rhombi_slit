@@ -40,7 +40,6 @@ xi_D = conditional(lt(x[1], H/2), aux2, aux1)
 bcs = [DirichletBC(V, xi_D, 2)]
 
 #Newton solver
-nullspace = VectorSpaceBasis(constant=True)
 solve(a == 0, xi, bcs=bcs, solver_parameters={'snes_monitor': None, 'snes_max_it': 25})
 
 final = File('aux_pull_sol.pvd')
@@ -60,10 +59,11 @@ Gamma = as_tensor(((Constant(0), Gamma12,), (Gamma21, Constant(0))))
 l = inner(dot(Gamma, grad(xi)), grad(v)) * dx
 
 gamma = Function(V, name='gamma')
+nullspace = VectorSpaceBasis(constant=True)
 solve(a == l, gamma, nullspace=nullspace)
 
-rotation = File('rot.pvd')
-rotation.write(gamma)
+#rotation = File('rot.pvd')
+#rotation.write(gamma)
 
 #Recovering global disp
 A = as_tensor(((mu1, Constant(0)), (Constant(0), mu2)))
@@ -78,5 +78,5 @@ l = inner(dot(R, A), grad(v))  * dx
 y = Function(W, name='yeff')
 solve(a == l, y, nullspace=nullspace)
 
-disp = File('disp.pvd')
+disp = File('aux_pull_disp.pvd')
 disp.write(y)
