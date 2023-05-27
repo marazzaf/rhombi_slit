@@ -18,10 +18,15 @@ alpha = -.9
 beta = 0.9
 uu = dolfinx.fem.Function(V, dtype=np.complex128)
 uu.interpolate(lambda x:0*x[0] + 0.1+0j)
-mu1 = ufl.cos(uu) - alpha*ufl.sin(uu)
-mu1_p = -ufl.sin(uu) - alpha*ufl.cos(uu)
-mu2 = ufl.cos(uu) + beta*ufl.sin(uu)
-mu2_p = -ufl.sin(uu) + beta*ufl.cos(uu)
+#mu1 = ufl.cos(uu) - alpha*ufl.sin(uu)
+#mu1_p = -ufl.sin(uu) - alpha*ufl.cos(uu)
+#mu2 = ufl.cos(uu) + beta*ufl.sin(uu)
+#mu2_p = -ufl.sin(uu) + beta*ufl.cos(uu)
+uR = ufl.real(uu)
+mu1 = ufl.cos(uR) - alpha*ufl.sin(uR)
+mu1_p = -ufl.sin(uR) - alpha*ufl.cos(uR)
+mu2 = ufl.cos(uR) + beta*ufl.sin(uR)
+mu2_p = -ufl.sin(uR) + beta*ufl.cos(uR)
 Gamma12 = -mu1_p / mu2
 Gamma21 = mu2_p / mu1
 Gamma = ufl.as_tensor(((-Gamma21, 0.), (0., Gamma12)))
@@ -52,7 +57,9 @@ u_bc.interpolate(xi)
 bc2 = dolfinx.fem.dirichletbc(u_bc, dofs_R)
 
 #Nonlinear problem
-J = dolfinx.fem.form(ufl.derivative(a, uu))
+#J = dolfinx.fem.form(ufl.derivative(a, uu))
+u = ufl.TrialFunction(V)
+J = ufl.inner(ufl.grad(u), ufl.grad(v)) * ufl.dx
 problem = dolfinx.fem.petsc.NonlinearProblem(a, uu, bcs=[bc1,bc2], J=J)
 solver = dolfinx.nls.petsc.NewtonSolver(MPI.COMM_WORLD, problem)
 solver.convergence_criterion = "incremental"
