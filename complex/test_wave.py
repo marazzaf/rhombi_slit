@@ -1,8 +1,8 @@
 import dolfinx
 from mpi4py import MPI
 import numpy as np
-N = 50
-mesh = dolfinx.mesh.create_rectangle(MPI.COMM_WORLD, [[0,0], [1,1]], [N, N])
+N = 100
+mesh = dolfinx.mesh.create_rectangle(MPI.COMM_WORLD, [[0,0], [1,1]], [N, N], diagonal=dolfinx.cpp.mesh.DiagonalType.crossed)
 V = dolfinx.fem.FunctionSpace(mesh, ("Lagrange", 2))
 
 from petsc4py import PETSc
