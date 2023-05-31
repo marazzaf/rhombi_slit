@@ -3,7 +3,7 @@ from mpi4py import MPI
 import numpy as np
 N = 100
 mesh = dolfinx.mesh.create_rectangle(MPI.COMM_WORLD, [[0,0], [1,1]], [N, N], diagonal=dolfinx.cpp.mesh.DiagonalType.crossed)
-V = dolfinx.fem.FunctionSpace(mesh, ("Lagrange", 2))
+V = dolfinx.fem.FunctionSpace(mesh, ("Lagrange", 3))
 
 from petsc4py import PETSc
 print(PETSc.ScalarType)

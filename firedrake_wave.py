@@ -13,8 +13,8 @@ v = TestFunction(V)
 u = TrialFunction(V)
 Gamma = as_tensor(((1, 0), (0, -1)))
 delta = 5e-1
-Gamma += delta * as_tensor(((1, 0), (0, 1)))
-a = inner(dot(Gamma, grad(u)), grad(v)) * dx
+#Gamma += delta * as_tensor(((1, 0), (0, 1)))
+a = inner(dot(Gamma, grad(u)), dot(Gamma, grad(v))) * dx
 
 #Linear form
 L = Constant(0) * v * dx
