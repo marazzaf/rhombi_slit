@@ -21,12 +21,12 @@ mu2_p = -sin(xi) + beta*cos(xi)
 Gamma12 = -mu1_p / mu2
 Gamma21 = mu2_p / mu1
 Gamma = as_tensor(((-Gamma21, Constant(0)), (Constant(0), Gamma12)))
-delta = 1 #0.05 #how to get it automatically?
+delta = 0.05 #how to get it automatically?
 
 #Weak formulation
 v = TestFunction(V)
-#a = inner(dot(Gamma, grad(xi)), dot(Gamma, grad(v))) * dx
-a = inner(dot(Gamma, grad(xi)), grad(v)) * dx
+a = inner(dot(Gamma, grad(xi)), dot(Gamma, grad(v))) * dx
+#a = inner(dot(Gamma, grad(xi)), grad(v)) * dx
 a += delta * inner(grad(xi), grad(v)) * dx
 
 #Dirichlet BC
@@ -34,7 +34,7 @@ x = SpatialCoordinate(mesh)
 val = 0.45
 aux1 = val * (2 - x[1]/H*2)
 aux2 = val * x[1]/H*2
-xi_D = conditional(lt(x[1], H/2), aux2, aux1)
+#xi_D = conditional(lt(x[1], H/2), aux2, aux1)
 #test
 xi_D = -4*val/H**2 * x[1] * (x[1] - H)# + val
 bcs = [DirichletBC(V, xi_D, 2)]

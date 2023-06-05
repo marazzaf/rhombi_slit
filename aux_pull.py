@@ -16,9 +16,11 @@ beta = 0.9
 #Complaince matrix
 xi = Function(V, name='xi')
 mu1 = cos(xi) - alpha*sin(xi)
-mu1_p = -sin(xi) - alpha*cos(xi)
 mu2 = cos(xi) + beta*sin(xi)
-mu2_p = -sin(xi) + beta*cos(xi)
+mu1_p = diff(mu1, xi)
+mu2_p = diff(mu2, xi)
+#mu1_p = -sin(xi) - alpha*cos(xi)
+#mu2_p = -sin(xi) + beta*cos(xi)
 Gamma12 = -mu1_p / mu2
 Gamma21 = mu2_p / mu1
 Gamma = as_tensor(((-Gamma21, Constant(0)), (Constant(0), Gamma12)))
@@ -26,9 +28,6 @@ Gamma = as_tensor(((-Gamma21, Constant(0)), (Constant(0), Gamma12)))
 #Weak formulation
 v = TestFunction(V)
 a = inner(dot(Gamma, grad(xi)), grad(v)) * dx
-#a = inner(dot(Gamma, grad(xi)), dot(Gamma, grad(v))) * dx
-#a += sqrt(0.06) * inner(grad(xi), grad(v)) * dx
-
 
 #Dirichlet BC
 val_max = 0.74 #0.8416

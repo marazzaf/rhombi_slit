@@ -1,12 +1,11 @@
 import dolfinx
 from mpi4py import MPI
 import numpy as np
-N = 100
+N = 200
 mesh = dolfinx.mesh.create_rectangle(MPI.COMM_WORLD, [[0,0], [1,1]], [N, N], diagonal=dolfinx.cpp.mesh.DiagonalType.crossed)
-V = dolfinx.fem.FunctionSpace(mesh, ("Lagrange", 3))
+V = dolfinx.fem.FunctionSpace(mesh, ("Lagrange", 1))
 
 from petsc4py import PETSc
-print(PETSc.ScalarType)
 assert np.dtype(PETSc.ScalarType).kind == 'c'
 
 #Bilinear form
@@ -14,7 +13,7 @@ import ufl
 v = ufl.TestFunction(V)
 u = ufl.TrialFunction(V)
 Gamma = ufl.as_tensor(((1, 0), (0, -1)))
-delta = 1e-5
+delta = 1/np.sqrt(N) #1e-5
 Gamma = ufl.as_tensor(((1, 0), (0, -1 * (1-1j*delta))))
 a = ufl.inner(ufl.dot(Gamma, ufl.grad(u)), ufl.grad(v)) * ufl.dx
 
