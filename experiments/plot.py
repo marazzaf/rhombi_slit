@@ -36,6 +36,8 @@ from scipy.interpolate import LinearNDInterpolator
 interp = LinearNDInterpolator(data[:,3:], data[:,2])
 #modify that with position in ref config?
 #thus change #data[:,:2]...
+print(interp([1], [1]))
+sys.exit()
 
 #Getting the BC
 #x = points[hull.vertices,0]

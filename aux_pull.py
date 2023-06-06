@@ -44,14 +44,14 @@ bcs = [DirichletBC(V, xi_D, 2)]
 W = VectorFunctionSpace(mesh, V.ufl_element())
 X = interpolate(mesh.coordinates, W)
 vec_coord = X.dat.data_ro
-print(vec_coord.size)
 res_BC = Function(V)
-print(res_BC.dat.data.size)
-print(BC()(vec_coord[0,0], vec_coord[0,1]))
-res_BC.dat.data[:] = BC()(vec_coord[:,0], vec_coord[:,1])
-sys.exit()
-#res_BC = 
+res = BC(vec_coord[:,0],vec_coord[:,1])
+res_BC.dat.data[:] = res
 bcs = [DirichletBC(V, res_BC, 2)]
+
+#Exit BC
+out_BC = File('bc.pvd')
+out_BC.write(res_BC)
 
 #Newton solver
 solve(a == 0, xi, bcs=bcs, solver_parameters={'snes_monitor': None, 'snes_max_it': 25})
