@@ -8,7 +8,7 @@ def BC(x,y):
     data = np.loadtxt('./experiments/aux_pull_ref.txt', comments='#')
 
     #Creating the Linear interpolation
-    interp = LinearNDInterpolator(data[:,3:5], data[:,2])
+    interp = LinearNDInterpolator(data[:,3:], data[:,2])
     return interp(x,y)
 
 

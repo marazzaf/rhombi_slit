@@ -5,8 +5,7 @@ from interpolate import BC
 import numpy as np
 
 mesh = Mesh('mesh.msh')
-L = 16
-H = 16
+L, H = 15,15
 
 V = FunctionSpace(mesh, "CG", 1)
 print('Nb dof: %i' % V.dim())

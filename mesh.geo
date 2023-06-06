@@ -1,11 +1,12 @@
-L = 16;
-H = 16;
+L = 15;
+H = 15;
 h = 0.05; //mesh size
+eps = 0.1;
 
-Point(1) = {0, 0, 0, h};
-Point(2) = {L, 0, 0, h};
-Point(3) = {L, H, 0, h};
-Point(4) = {0, H, 0, h};
+Point(1) = {0+eps, 0+eps, 0, h};
+Point(2) = {L-eps, 0+eps, 0, h};
+Point(3) = {L-eps, H-eps, 0, h};
+Point(4) = {0+eps, H-eps, 0, h};
 
 Line(1) = {1,2};
 Line(2) = {2,3};

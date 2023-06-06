@@ -6,7 +6,7 @@ import sys
 data = np.loadtxt('aux_pull.txt', comments='#')
 
 #xi = data[:,2]
-#print(data[data[:,0] > 2.25])
+#print(data[data[:,0] > 1.75])
 #sys.exit()
 
 #Plot data
@@ -14,8 +14,9 @@ plt.scatter(data[:,0], data[:,1], c=data[:,2])
 plt.colorbar()
 #plt.xlim(0.5,2.4)
 #plt.ylim(0.3,1.9)
+plt.savefig('data.png')
 plt.show()
-#sys.exit()
+sys.exit()
 
 #Computing the convex Hull
 from scipy.spatial import ConvexHull
