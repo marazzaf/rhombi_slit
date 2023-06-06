@@ -1,5 +1,7 @@
 from firedrake import *
 import sys
+sys.path.append('./experiments/')
+from interpolate import BC
 import numpy as np
 
 mesh = Mesh('mesh.msh')
@@ -38,10 +40,23 @@ aux2 = (val_max - val_min)  * x[1]/H*2 + val_min
 xi_D = conditional(lt(x[1], H/2), aux2, aux1)
 bcs = [DirichletBC(V, xi_D, 2)]
 
+#test
+W = VectorFunctionSpace(mesh, V.ufl_element())
+X = interpolate(mesh.coordinates, W)
+vec_coord = X.dat.data_ro
+print(vec_coord.size)
+res_BC = Function(V)
+print(res_BC.dat.data.size)
+print(BC()(vec_coord[0,0], vec_coord[0,1]))
+res_BC.dat.data[:] = BC()(vec_coord[:,0], vec_coord[:,1])
+sys.exit()
+#res_BC = 
+bcs = [DirichletBC(V, res_BC, 2)]
+
 #Newton solver
 solve(a == 0, xi, bcs=bcs, solver_parameters={'snes_monitor': None, 'snes_max_it': 25})
 
-final = File('aux_pull_sol.pvd')
+final = File('aux_pull_xi.pvd')
 final.write(xi)
 
 #poisson = File('aux_pull_poisson.pvd')
