@@ -1,7 +1,7 @@
 L = 15;
 H = 15;
 h = 0.05; //mesh size
-eps = 0.1;
+eps = 0.01;
 
 Point(1) = {0+eps, 0+eps, 0, h};
 Point(2) = {L-eps, 0+eps, 0, h};

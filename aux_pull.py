@@ -2,13 +2,13 @@ from firedrake import *
 import sys
 sys.path.append('./experiments/')
 from interpolate import BC
-import numpy as np
+from firedrake.petsc import PETSc
 
 mesh = Mesh('mesh.msh')
 L, H = 15,15
 
 V = FunctionSpace(mesh, "CG", 1)
-print('Nb dof: %i' % V.dim())
+PETSc.Sys.Print('Nb dof: %i' % V.dim())
 
 ##material parameters
 alpha = -.9
@@ -32,7 +32,7 @@ a = inner(dot(Gamma, grad(xi)), grad(v)) * dx
 
 #Dirichlet BC
 val_max = 0.74 #0.8416
-val_min = 0.0831
+val_min = 0 #0.0831
 x = SpatialCoordinate(mesh)
 aux1 = (val_max - val_min) * (2 - x[1]/H*2) + val_min
 aux2 = (val_max - val_min)  * x[1]/H*2 + val_min
@@ -46,7 +46,7 @@ vec_coord = X.dat.data_ro
 res_BC = Function(V)
 res = BC(vec_coord[:,0],vec_coord[:,1])
 res_BC.dat.data[:] = res
-bcs = [DirichletBC(V, res_BC, 2)]
+#bcs = [DirichletBC(V, res_BC, 2)]
 
 #Exit BC
 out_BC = File('bc.pvd')
