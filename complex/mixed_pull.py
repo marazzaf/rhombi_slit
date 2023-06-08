@@ -32,7 +32,7 @@ v = ufl.TestFunction(V)
 a = ufl.inner(ufl.dot(Gamma, ufl.grad(xi)), ufl.grad(v)) * ufl.dx
 
 #Boundary conditions
-val_max = 0.45
+val_max = 0.39
 val_min = 0
 x = ufl.SpatialCoordinate(mesh)
 aux1 = (val_max - val_min) * (2 - x[1]/H*2) + val_min
