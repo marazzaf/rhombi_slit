@@ -1,97 +1,136 @@
 import dolfinx
 from mpi4py import MPI
 import numpy as np
-LL,H = 16,16
+import sys
+LL,H = 15,15
 N = 80 #160
 mesh = dolfinx.mesh.create_rectangle(MPI.COMM_WORLD, [[0,0], [LL,H]], [N, N])
 num_cells = mesh.topology.index_map(2).size_local
 h = dolfinx.cpp.mesh.h(mesh, 2, range(num_cells))
 h = h.max()
-V = dolfinx.fem.FunctionSpace(mesh, ("Lagrange", 1))
+V = dolfinx.fem.FunctionSpace(mesh, ("CG", 1))
 
 from petsc4py import PETSc
-print(PETSc.ScalarType)
 assert np.dtype(PETSc.ScalarType).kind == 'c'
 
 import ufl
 alpha = -1.6
 beta = 0.4
-uu = dolfinx.fem.Function(V, dtype=np.complex128)
-uu.interpolate(lambda x:0*x[0] + 0.1+0j)
-uR = ufl.real(uu)
-#mu1 = ufl.cos(uu) - alpha*ufl.sin(uu)
-#mu1_p = -ufl.sin(uu) - alpha*ufl.cos(uu)
-#mu2 = ufl.cos(uu) + beta*ufl.sin(uu)
-#mu2_p = -ufl.sin(uu) + beta*ufl.cos(uu)
-mu1 = ufl.cos(uR) - alpha*ufl.sin(uR)
-mu1_p = -ufl.sin(uR) - alpha*ufl.cos(uR)
-mu2 = ufl.cos(uR) + beta*ufl.sin(uR)
-mu2_p = -ufl.sin(uR) + beta*ufl.cos(uR)
+xi = dolfinx.fem.Function(V, dtype=np.complex128)
+mu1 = ufl.cos(xi) - alpha*ufl.sin(xi)
+mu2 = ufl.cos(xi) + beta*ufl.sin(xi)
+mu1_p = ufl.diff(mu1, xi)
+mu2_p = ufl.diff(mu2, xi)
 Gamma12 = -mu1_p / mu2
 Gamma21 = mu2_p / mu1
 Gamma = ufl.as_tensor(((-Gamma21, 0.), (0., Gamma12)))
 delta = np.sqrt(h) #h #np.sqrt(h) #1e-2
 Gamma += ufl.as_tensor(((delta*1j, 0), (0, delta*1j)))
-#test
-#Gamma = ufl.as_tensor(((Gamma21, 0.), (0., Gamma12)))
 
 #Bilinear form
 v = ufl.TestFunction(V)
-a = ufl.inner(ufl.dot(Gamma, ufl.grad(uu)), ufl.grad(v)) * ufl.dx
+a = ufl.inner(ufl.dot(Gamma, ufl.grad(xi)), ufl.grad(v)) * ufl.dx
 
 #Boundary conditions
+val_max = 0.45
+val_min = 0
+x = ufl.SpatialCoordinate(mesh)
+aux1 = (val_max - val_min) * (2 - x[1]/H*2) + val_min
+aux2 = (val_max - val_min)  * x[1]/H*2 + val_min
+xi_D = ufl.conditional(ufl.lt(x[1], H/2), aux2, aux1)
+xi_D = dolfinx.fem.Expression(xi_D, V.element.interpolation_points())
 u_bc = dolfinx.fem.Function(V, dtype=np.complex128)
-val = 0.45
-#xi = lambda x: val * x[1]/H*2 if np.where(x[1] < H/2) else val * (2 - x[1]/H*2)
-xi = lambda x: -4*val/H**2 * x[1] * (x[1] - H)
-u_bc.interpolate(xi)
+u_bc.interpolate(xi_D)
+
+#Applying BC
 mesh.topology.create_connectivity(mesh.topology.dim-1, mesh.topology.dim)
 boundary_facets = dolfinx.mesh.exterior_facet_indices(mesh.topology)
-tol = 1
 dofs_L = dolfinx.fem.locate_dofs_geometrical(V, lambda x: np.isclose(x[0], 0))
-bc1 = dolfinx.fem.dirichletbc(u_bc, dofs_L) #boundary_dofs)
+bc1 = dolfinx.fem.dirichletbc(u_bc, dofs_L)
 dofs_R = dolfinx.fem.locate_dofs_geometrical(V, lambda x: np.isclose(x[0], LL))
 bc2 = dolfinx.fem.dirichletbc(u_bc, dofs_R)
 
 #Nonlinear problem
-J = dolfinx.fem.form(ufl.derivative(a, uu))
-problem = dolfinx.fem.petsc.NonlinearProblem(a, uu, bcs=[bc1,bc2], J=J)
+problem = dolfinx.fem.petsc.NonlinearProblem(a, xi, bcs=[bc1,bc2])
 solver = dolfinx.nls.petsc.NewtonSolver(MPI.COMM_WORLD, problem)
 solver.convergence_criterion = "incremental"
 solver.rtol = 1e-6
 solver.report = True
 dolfinx.log.set_log_level(dolfinx.log.LogLevel.INFO)
-n, converged = solver.solve(uu)
+n, converged = solver.solve(xi)
 assert(converged)
 print(f"Number of interations: {n:d}")
 
-aux = dolfinx.fem.form(ufl.action(a,uu))
-print(dolfinx.fem.assemble_vector(aux))
-
-with dolfinx.io.XDMFFile(mesh.comm, "conv_%i_test.xdmf" % N, "w") as xdmf:
+with dolfinx.io.XDMFFile(mesh.comm, "mixed_%i_xi.xdmf" % N, "w") as xdmf:
     xdmf.write_mesh(mesh)
-    uu.name = "Rotation"
-    xdmf.write_function(uu)
+    xi.name = "xi"
+    xdmf.write_function(xi)
 
-#test
-uR = dolfinx.fem.Function(V, dtype=np.complex128)
-uR.x.array[:] = uu.x.array.real
-mu1 = ufl.cos(uR) - alpha*ufl.sin(uR)
-mu1_p = -ufl.sin(uR) - alpha*ufl.cos(uR)
-mu2 = ufl.cos(uR) + beta*ufl.sin(uR)
-mu2_p = -ufl.sin(uR) + beta*ufl.cos(uR)
-Gamma12 = -mu1_p / mu2
-Gamma21 = mu2_p / mu1
-Gamma = ufl.as_tensor(((-Gamma21, 0.), (0., Gamma12)))
-a = ufl.inner(ufl.dot(Gamma, ufl.grad(uR)), ufl.grad(v)) * ufl.dx
-aux = dolfinx.fem.form(ufl.action(a,uR))
-print(dolfinx.fem.assemble_scalar(aux))
-import sys
-sys.exit()
+#poisson = dolfinx.fem.Function(V, dtype=np.complex128)
+#from project import project
+#project(Gamma21*mu1**2/(Gamma12*mu2**2), poisson)
+#with dolfinx.io.XDMFFile(mesh.comm, "poisson.xdmf", "w") as xdmf:
+#    xdmf.write_mesh(mesh)
+#    xdmf.write_function(poisson)
 
-poisson = dolfinx.fem.Function(V, dtype=np.complex128)
-from project import project
-project(Gamma21*mu1**2/(Gamma12*mu2**2), poisson)
-with dolfinx.io.XDMFFile(mesh.comm, "poisson.xdmf", "w") as xdmf:
+#Recovering global rotation
+from ufl import *
+u = TrialFunction(V)
+a = inner(grad(u), grad(v)) * dx
+#rhs
+Gamma = as_tensor(((0, Gamma12,), (Gamma21, 0)))
+L = inner(dot(Gamma, grad(xi)), grad(v)) * dx
+
+# Assemble system
+A = dolfinx.fem.petsc.assemble_matrix(dolfinx.fem.form(a))
+A.assemble()
+b = dolfinx.fem.petsc.create_vector(dolfinx.fem.form(L))
+with b.localForm() as b_loc:
+            b_loc.set(0)
+dolfinx.fem.petsc.assemble_vector(b,dolfinx.fem.form(L))
+
+# Solution Function
+gamma = dolfinx.fem.Function(V)
+# Create Krylov solver
+solver = PETSc.KSP().create(A.getComm())
+solver.setOperators(A)
+# Create vector that spans the null space
+nullspace = PETSc.NullSpace().create(constant=True,comm=MPI.COMM_WORLD)
+A.setNullSpace(nullspace)
+# orthogonalize b with respect to the nullspace ensures that 
+# b does not contain any component in the nullspace
+nullspace.remove(b)
+# Finally we are able to solve our linear system ::
+solver.solve(b,gamma.vector)
+
+
+#Recovering global disp
+A = as_tensor(((mu1, 0), (0, mu2)))
+R = as_tensor(((cos(gamma), -sin(gamma)), (sin(gamma), cos(gamma))))
+
+W = dolfinx.fem.VectorFunctionSpace(mesh, ('CG', 1))
+u = TrialFunction(W)
+v = TestFunction(W)
+a = inner(grad(u), grad(v)) * dx
+L = inner(dot(R, A), grad(v))  * dx
+
+# Assemble system
+A = dolfinx.fem.petsc.assemble_matrix(dolfinx.fem.form(a))
+A.assemble()
+b = dolfinx.fem.petsc.create_vector(dolfinx.fem.form(L))
+with b.localForm() as b_loc:
+            b_loc.set(0)
+dolfinx.fem.petsc.assemble_vector(b,dolfinx.fem.form(L))
+
+yeff = dolfinx.fem.Function(W)
+solver = PETSc.KSP().create(A.getComm())
+solver.setOperators(A)
+nullspace = PETSc.NullSpace().create(constant=True,comm=MPI.COMM_WORLD)
+A.setNullSpace(nullspace)
+nullspace.remove(b)
+solver.solve(b,yeff.vector)
+
+with dolfinx.io.XDMFFile(mesh.comm, "mixed_%i_disp.xdmf" % N, "w") as xdmf:
     xdmf.write_mesh(mesh)
-    xdmf.write_function(poisson)
+    yeff.name = "yeff"
+    xdmf.write_function(yeff)
