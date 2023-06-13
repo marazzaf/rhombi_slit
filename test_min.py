@@ -5,22 +5,26 @@ from interpolate import BC
 from firedrake.petsc import PETSc
 from scipy.optimize import minimize
 from scipy.interpolate import LinearNDInterpolator
+import numpy as np
+import matplotlib.pyplot as plt
 
 #Loading exp results
-data = np.loadtxt('./experiments/aux_pull.txt', comments='#')
+data = np.loadtxt('./experiments/aux_pull_new.txt', comments='#')
 
 #Interpolate the exp results?
-#interp = LinearNDInterpolator(data[:,3:], data[:,2])
+interp = LinearNDInterpolator(data[:,:2], data[:,2])
 
 #test
 fun = lambda x: (x[0] - 1)**2 + (x[1] - 2.5)**2
 res = minimize(fun, (2, 0))#, method='SLSQP')
 assert res.success
-print(res.x)
-sys.exit()
+#print(res.x)
+#sys.exit()
 
-mesh = Mesh('mesh.msh')
-L, H = 15,15
+mesh = Mesh('mesh_test.msh')
+L, H = 1.6,1.6
+#N = 5
+#mesh = RectangleMesh(N,N,L,H,diagonal='crossed')
 
 V = FunctionSpace(mesh, "CG", 1)
 PETSc.Sys.Print('Nb dof: %i' % V.dim())
@@ -43,21 +47,20 @@ Gamma = as_tensor(((-Gamma21, Constant(0)), (Constant(0), Gamma12)))
 v = TestFunction(V)
 a = inner(dot(Gamma, grad(xi)), grad(v)) * dx
 
-#Dirichlet BC
-val_max = 0.74 #0.8416
-val_min = 0 #0.0831
+#old Dirichlet BC
+val_max = 0.74
 x = SpatialCoordinate(mesh)
-aux1 = (val_max - val_min) * (2 - x[1]/H*2) + val_min
-aux2 = (val_max - val_min)  * x[1]/H*2 + val_min
-xi_D = conditional(lt(x[1], H/2), aux2, aux1)
+aux1 = val_max * (1 - x[1]/H*2)
+aux2 = val_max * (x[1]/H*2 + 1)
+xi_D = conditional(lt(x[1], 0), aux2, aux1)
 bcs = [DirichletBC(V, xi_D, 2)]
 
-#test
+#BC coming from optimization.
 W = VectorFunctionSpace(mesh, V.ufl_element())
 X = interpolate(mesh.coordinates, W)
 vec_coord = X.dat.data_ro
 res_BC = Function(V)
-res = BC(vec_coord[:,0],vec_coord[:,1])
+res = interp(vec_coord[:,0],vec_coord[:,1])
 res_BC.dat.data[:] = res
 #bcs = [DirichletBC(V, res_BC, 2)]
 
@@ -101,8 +104,23 @@ v = TestFunction(W)
 a = inner(grad(u), grad(v)) * dx
 l = inner(dot(R, A), grad(v))  * dx
 
-y = Function(W, name='yeff')
-solve(a == l, y, nullspace=nullspace)
+yeff = Function(W, name='yeff')
+solve(a == l, yeff, nullspace=nullspace)
 
 disp = File('aux_pull_disp.pvd')
-disp.write(y)
+disp.write(yeff)
+
+#Constructing the interpolation to have xi_h on deformed mesh
+W = VectorFunctionSpace(mesh, V.ufl_element())
+X = interpolate(mesh.coordinates, W)
+vec_coord = X.dat.data_ro
+#x = vec_coord[:,0]
+#y = vec_coord[:,1]
+print(vec_coord)
+def_coord = vec_coord + yeff.dat.data_ro * 1e-3
+print(def_coord)
+
+#Plot data
+plt.scatter(def_coord[:,0], def_coord[:,1], c=xi.dat.data_ro)
+plt.colorbar()
+plt.show()
