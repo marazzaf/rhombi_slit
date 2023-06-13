@@ -3,11 +3,12 @@ from mpi4py import MPI
 import numpy as np
 import sys
 LL,H = 15,15
-N = 80 #320 #160 #80
+N = 320 #320 #160 #80
 mesh = dolfinx.mesh.create_rectangle(MPI.COMM_WORLD, [[0,0], [LL,H]], [N, N], diagonal=dolfinx.cpp.mesh.DiagonalType.crossed)
 num_cells = mesh.topology.index_map(2).size_local
 h = dolfinx.cpp.mesh.h(mesh, 2, range(num_cells))
 h = h.max()
+print('Size mesh: %.3e' % h)
 V = dolfinx.fem.FunctionSpace(mesh, ("CG", 1))
 print('Nb dof: %i' % (V.dofmap.index_map.size_global * V.dofmap.index_map_bs))
 
@@ -87,21 +88,59 @@ b = dolfinx.fem.petsc.create_vector(dolfinx.fem.form(L))
 with b.localForm() as b_loc:
             b_loc.set(0)
 dolfinx.fem.petsc.assemble_vector(b,dolfinx.fem.form(L))
-sys.exit()
 
+# Create Krylov solver
+solver = PETSc.KSP().create(A.getComm())
+solver.setOperators(A)
+
+# Create vector that spans the null space
+nullspace = PETSc.NullSpace().create(constant=True,comm=MPI.COMM_WORLD)
+A.setNullSpace(nullspace)
+
+# orthogonalize b with respect to the nullspace ensures that 
+# b does not contain any component in the nullspace
+nullspace.remove(b)
+
+# Finally we are able to solve our linear system ::
+gamma = dolfinx.fem.Function(V)
+solver.solve(b,gamma.vector)
 
 #Recovering global disp
-A = as_tensor(((mu1, Constant(0)), (Constant(0), mu2)))
-R = as_tensor(((cos(gamma), -sin(gamma)), (sin(gamma), cos(gamma))))
+A = ufl.as_tensor(((mu1, 0), (0, mu2)))
+R = ufl.as_tensor(((ufl.cos(gamma), -ufl.sin(gamma)), (ufl.sin(gamma), ufl.cos(gamma))))
 
-W = VectorFunctionSpace(mesh, 'CG', 1) #2
-u = TrialFunction(W)
-v = TestFunction(W)
-a = inner(grad(u), grad(v)) * dx
-l = inner(dot(R, A), grad(v))  * dx
+W = dolfinx.fem.VectorFunctionSpace(mesh, ('CG', 1)) #2
+u = ufl.TrialFunction(W)
+v = ufl.TestFunction(W)
+a = ufl.inner(ufl.grad(u), ufl.grad(v)) * ufl.dx
+L = ufl.inner(ufl.dot(R, A), ufl.grad(v)) * ufl.dx
 
-y = Function(W, name='yeff')
-solve(a == l, y, nullspace=nullspace)
+# Assemble system
+A = dolfinx.fem.petsc.assemble_matrix(dolfinx.fem.form(a))
+A.assemble()
+b = dolfinx.fem.petsc.create_vector(dolfinx.fem.form(L))
+with b.localForm() as b_loc:
+            b_loc.set(0)
+dolfinx.fem.petsc.assemble_vector(b,dolfinx.fem.form(L))
 
-disp = File('aux_pull_disp.pvd')
-disp.write(y)
+# Create Krylov solver
+solver = PETSc.KSP().create(A.getComm())
+solver.setOperators(A)
+
+# Create vector that spans the null space
+nullspace = PETSc.NullSpace().create(constant=True,comm=MPI.COMM_WORLD)
+A.setNullSpace(nullspace)
+
+# orthogonalize b with respect to the nullspace ensures that 
+# b does not contain any component in the nullspace
+nullspace.remove(b)
+
+# Finally we are able to solve our linear system ::
+y = dolfinx.fem.Function(W)
+solver.solve(b,y.vector)
+
+#Writing output
+with dolfinx.io.XDMFFile(mesh.comm, "non_%i_disp.xdmf" % N, "w") as xdmf:
+    xdmf.write_mesh(mesh)
+    y.name = "y_eff"
+    xdmf.write_function(y)

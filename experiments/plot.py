@@ -3,10 +3,25 @@ import matplotlib.pyplot as plt
 import sys
 
 #Load data
-data = np.loadtxt('mixed_pull_6.txt', comments='#')
+data = np.loadtxt('aux_pull_new.txt', comments='#')
 
+##averages
+#x = data[:,0]
+#y = data[:,1]
 #xi = data[:,2]
-#print(data[data[:,0] > 1.75])
+#avg = (np.mean(x),np.mean(y))
+#print(avg)
+#
+#new = np.array([x-avg[0],y-avg[1],xi])
+#print(data[:10,:])
+#print(new.T[:10,:])
+#np.savetxt('aux_pull_new.txt', new.T, fmt='%.4f')
+#sys.exit()
+
+##sort
+#print(data[:10,:])
+#ind = np.lexsort((y,x))
+#print(data[ind[:10]])
 #sys.exit()
 
 #Plot data
