@@ -12,7 +12,7 @@ import matplotlib.pyplot as plt
 data = np.loadtxt('./experiments/aux_pull_new.txt', comments='#')
 
 #Interpolate the exp results?
-interp = LinearNDInterpolator(data[:,:2], data[:,2])
+exp_interp = LinearNDInterpolator(data[:,:2], data[:,2])
 
 #test
 fun = lambda x: (x[0] - 1)**2 + (x[1] - 2.5)**2
@@ -55,18 +55,18 @@ aux2 = val_max * (x[1]/H*2 + 1)
 xi_D = conditional(lt(x[1], 0), aux2, aux1)
 bcs = [DirichletBC(V, xi_D, 2)]
 
-#BC coming from optimization.
-W = VectorFunctionSpace(mesh, V.ufl_element())
-X = interpolate(mesh.coordinates, W)
-vec_coord = X.dat.data_ro
-res_BC = Function(V)
-res = interp(vec_coord[:,0],vec_coord[:,1])
-res_BC.dat.data[:] = res
+##BC coming from optimization.
+#W = VectorFunctionSpace(mesh, V.ufl_element())
+#X = interpolate(mesh.coordinates, W)
+#vec_coord = X.dat.data_ro
+#res_BC = Function(V)
+#res = exp_interp(vec_coord[:,0],vec_coord[:,1])
+#res_BC.dat.data[:] = res
 #bcs = [DirichletBC(V, res_BC, 2)]
 
-#Exit BC
-out_BC = File('bc.pvd')
-out_BC.write(res_BC)
+##Exit BC
+#out_BC = File('bc.pvd')
+#out_BC.write(res_BC)
 
 #Newton solver
 solve(a == 0, xi, bcs=bcs, solver_parameters={'snes_monitor': None, 'snes_max_it': 25})
@@ -116,11 +116,22 @@ X = interpolate(mesh.coordinates, W)
 vec_coord = X.dat.data_ro
 #x = vec_coord[:,0]
 #y = vec_coord[:,1]
-print(vec_coord)
-def_coord = vec_coord + yeff.dat.data_ro * 1e-3
-print(def_coord)
+#print(vec_coord)
+def_coord = vec_coord + yeff.dat.data_ro * 0.1 #coord in deformed mesh
+#print(def_coord)
 
-#Plot data
-plt.scatter(def_coord[:,0], def_coord[:,1], c=xi.dat.data_ro)
-plt.colorbar()
-plt.show()
+##Plot data
+#plt.scatter(def_coord[:,0], def_coord[:,1], c=xi.dat.data_ro)
+#plt.colorbar()
+#plt.show()
+
+#Constructing the interpolation
+res = LinearNDInterpolator(def_coord, xi.dat.data_ro)
+
+#Defining points to compare computation to experiment
+list_pos = np.array([[-.7, 0], [.7, 0], [-.7,.7], [.7,.7], [-.7,-.7], [.7,-.7]])
+list_xi_exp = exp_interp(list_pos)
+list_xi_comp = res(list_pos)
+
+err = np.linalg.norm(list_xi_exp - list_xi_comp)
+print(err)

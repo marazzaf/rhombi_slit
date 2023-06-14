@@ -5,14 +5,14 @@ import sys
 #Load data
 data = np.loadtxt('aux_pull_new.txt', comments='#')
 
-##averages
-#x = data[:,0]
-#y = data[:,1]
-#xi = data[:,2]
-#avg = (np.mean(x),np.mean(y))
-#print(avg)
-#
-#new = np.array([x-avg[0],y-avg[1],xi])
+#averages
+x = data[:,0]
+y = data[:,1]
+xi = data[:,2]
+avg = (np.mean(x),np.mean(y))
+print(avg)
+
+new = np.array([x-avg[0],y-avg[1],xi]).T
 #print(data[:10,:])
 #print(new.T[:10,:])
 #np.savetxt('aux_pull_new.txt', new.T, fmt='%.4f')
@@ -25,11 +25,11 @@ data = np.loadtxt('aux_pull_new.txt', comments='#')
 #sys.exit()
 
 #Plot data
-plt.scatter(data[:,0], data[:,1], c=data[:,2])
+plt.scatter(new[:,0], new[:,1], c=data[:,2])
 plt.colorbar()
 #plt.xlim(0.5,2.4)
 #plt.ylim(0.3,1.9)
-plt.savefig('data_mixed.png')
+plt.savefig('data_pull.png')
 plt.show()
 sys.exit()
 
