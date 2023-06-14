@@ -91,8 +91,8 @@ gamma = Function(V, name='gamma')
 nullspace = VectorSpaceBasis(constant=True)
 solve(a == l, gamma, nullspace=nullspace)
 
-#rotation = File('rot.pvd')
-#rotation.write(gamma)
+rotation = File('aux_pull_gamma.pvd')
+rotation.write(gamma)
 
 #Recovering global disp
 A = as_tensor(((mu1, Constant(0)), (Constant(0), mu2)))
@@ -105,25 +105,33 @@ a = inner(grad(u), grad(v)) * dx
 l = inner(dot(R, A), grad(v))  * dx
 
 yeff = Function(W, name='yeff')
-solve(a == l, yeff, nullspace=nullspace)
+aux = Function(W)
+solve(a == l, yeff)
+
+#averaging
+pos_x = assemble(yeff[0] * dx) / assemble(1 * dx(mesh))
+pos_y = assemble(yeff[1] * dx) / assemble(1 * dx(mesh))
+yeff.interpolate(yeff - Constant((pos_x, pos_y)))
+disp = yeff.dat.data_ro - np.array([pos_x, pos_y])
 
 disp = File('aux_pull_disp.pvd')
 disp.write(yeff)
 
 #Constructing the interpolation to have xi_h on deformed mesh
-W = VectorFunctionSpace(mesh, V.ufl_element())
-X = interpolate(mesh.coordinates, W)
-vec_coord = X.dat.data_ro
-#x = vec_coord[:,0]
-#y = vec_coord[:,1]
-#print(vec_coord)
-def_coord = vec_coord + yeff.dat.data_ro * 0.1 #coord in deformed mesh
-#print(def_coord)
+#W = VectorFunctionSpace(mesh, V.ufl_element())
+#X = interpolate(mesh.coordinates, W)
+#vec_coord = X.dat.data_ro
+##x = vec_coord[:,0]
+##y = vec_coord[:,1]
+##print(vec_coord)
+##def_coord = vec_coord + yeff.dat.data_ro * 0.1 #coord in deformed mesh
+##print(def_coord)
+def_coord = yeff.dat.data_ro #Is that correct?
 
-##Plot data
-#plt.scatter(def_coord[:,0], def_coord[:,1], c=xi.dat.data_ro)
-#plt.colorbar()
-#plt.show()
+#Plot data
+plt.scatter(def_coord[:,0], def_coord[:,1], c=xi.dat.data_ro)
+plt.colorbar()
+plt.show()
 
 #Constructing the interpolation
 res = LinearNDInterpolator(def_coord, xi.dat.data_ro)
