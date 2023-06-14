@@ -22,7 +22,7 @@ assert res.success
 #sys.exit()
 
 mesh = Mesh('mesh_test.msh')
-L, H = 1.6,1.6
+H = 1.4
 #N = 5
 #mesh = RectangleMesh(N,N,L,H,diagonal='crossed')
 
@@ -89,7 +89,10 @@ l = inner(dot(Gamma, grad(xi)), grad(v)) * dx
 
 gamma = Function(V, name='gamma')
 nullspace = VectorSpaceBasis(constant=True)
-solve(a == l, gamma, nullspace=nullspace)
+#solve(a == l, gamma, nullspace=nullspace)
+A = assemble(a)
+L = assemble(l)
+solve(A, gamma, L, nullspace=nullspace)
 
 rotation = File('aux_pull_gamma.pvd')
 rotation.write(gamma)
