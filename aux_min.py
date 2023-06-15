@@ -16,14 +16,14 @@ exp_interp = LinearNDInterpolator(data[:,:2], data[:,2])
 
 #Defining points to compare computation to experiment
 #Update these!
-top_right = np.array([[0.77, 0.85], [0.80, 0.71], [0.84, 0.50], [0.87, 0.31], [0.90,0.06]])
-top_left = np.array([[-0.77, 0.88], [-0.80, 0.73], [-0.84, 0.56], [-0.88, 0.31], [-0.91, 0.07]])
-bottom_right = np.array([[0.90, -0.06], [0.87, -0.32], [0.85, -0.44], [0.82, -0.61], [0.78, -0.87]])
-bottom_left = np.array([[-0.91, -0.07], [-0.88, -0.25], [-0.86, -0.44], [-0.83, -0.61], [-0.79, -0.86]])
+top_right = np.array([[0.86, 0.86], [0.89, 0.60], [0.92, 0.30], [0.95,0.05]])
+top_left = np.array([[-0.85, 0.90], [-0.88, 0.68], [-0.91, 0.45], [-0.95, 0.12]])
+bottom_right = np.array([[0.93, -0.20], [0.90, -0.45], [0.88, -0.68], [0.85, -0.89]])
+bottom_left = np.array([[-0.93, -0.26], [-0.90, -0.51], [-0.87, -0.75], [-0.86, -0.90]])
 list_points_def = np.concatenate((top_right,bottom_right,top_left,bottom_left))
 
 #Defining points where BC are optimized
-H = 1.45 #Update that!
+H = 1.5
 N = 11
 aux = np.linspace(-H/2, H/2, N)
 res = np.array([-H/2*np.ones_like(aux), aux]).T
@@ -132,7 +132,7 @@ def min_BC(x): #values for the BC
     def_coord = yeff.dat.data_ro
     
     #Constructing the interpolation
-    res = LinearNDInterpolator(def_coord, xi.dat.data_ro, fill_value=1.5)
+    res = LinearNDInterpolator(def_coord, xi.dat.data_ro, fill_value=10)
     #Where to get the points in def config...
     #Value of func at points in def configu
     list_xi_exp = exp_interp(list_points_def)
@@ -147,8 +147,12 @@ def min_BC(x): #values for the BC
     
     err = np.linalg.norm(list_xi_exp - list_xi_comp)
     print(err)
-    #sys.exit()
+
     return err
+#    return (err, list_xi_exp - list_xi_comp)
+
+#def jac(x):
+#    return list_xi_exp - list_xi_comp
 
 #Minimizing the BC
 #initial = (0, 0.3, 0.74, 0.3, 0, 0, 0.3, 0.74, 0.3, 0)
@@ -156,7 +160,9 @@ initial = np.linspace(0, 0.74, int(N/2)+1)
 initial = np.concatenate((initial, np.flip(initial)[1:]))
 initial = np.concatenate((initial, initial))
 #print(initial.shape)
-res_min = minimize(min_BC, initial, tol=1e-3, method='BFGS')
+bnds = np.tensordot(np.ones_like(initial), np.array([0, 0.8]), axes=0)
+res_min = minimize(min_BC, initial, tol=1e-3, bounds=bnds) #, method='BFGS')
+#res_min = minimize(min_BC, initial, tol=1e-3, jac=True, method='Newton-CG')
 assert res_min.success
 
 #Possible to add the jacobian to have faster convergence?
