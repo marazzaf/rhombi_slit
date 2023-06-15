@@ -29,7 +29,7 @@ data = np.loadtxt('aux_pull_new.txt', comments='#')
 
 #Plot data
 #plt.scatter(new[:,0], new[:,1], c=new[:,2])
-plt.scatter(data[:,0], data[:,1], c=data[:,2])
+plt.scatter(data[:,0], data[:,1], c=data[:,2], cmap='jet')
 plt.colorbar()
 #plt.xlim(0.5,2.4)
 #plt.ylim(0.3,1.9)
