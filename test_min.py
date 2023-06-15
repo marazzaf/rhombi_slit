@@ -15,11 +15,16 @@ data = np.loadtxt('./experiments/aux_pull_new.txt', comments='#')
 exp_interp = LinearNDInterpolator(data[:,:2], data[:,2])
 
 #Defining points to compare computation to experiment
-H = 1.45
-N = 5
+#Hand make that list with plot
+list_points_def = np.array([[0.7, 0.85], [0.84, 0.50], [0.90,0.06], [0.90, -0.06], [0.85, -0.44], [0.75, -0.87], [-0.77, 0.88], [-0.84, 0.57], [-0.91, 0.07], [-0.91, 0.07], [-0.86, -0.44], [-0.79, -0.86]])
+
+#Defining points where BC are optimized
+H = 1.4
+N = 11
 aux = np.linspace(-H/2, H/2, N)
 res = np.array([-H/2*np.ones_like(aux), aux]).T
 list_points = np.concatenate((res,np.array([H/2*np.ones_like(aux), aux]).T))
+#print(list_points.shape)
 
 #Necessary for computation
 mesh = Mesh('mesh_test.msh')
@@ -113,25 +118,28 @@ def min_BC(x): #values for the BC
     
     disp = File('aux_pull_disp.pvd')
     disp.write(yeff)
+
+    disp_aux = File('aux_pull_disp_aux.pvd')
+    x = SpatialCoordinate(mesh)
+    yeff_aux = interpolate(yeff - as_vector((x[0], x[1])), W)
+    disp_aux.write(yeff_aux)
     
     #Coords in deformed configuration
     def_coord = yeff.dat.data_ro
     
     #Constructing the interpolation
     res = LinearNDInterpolator(def_coord, xi.dat.data_ro, fill_value=1.5)
-    
-    #Value of func at 
-    list_xi_exp = exp_interp(list_points)
-    #print(list_xi_exp)
-    list_xi_comp = res(list_points)
-    #print(list_xi_comp)
+    #Where to get the points in def config...
+    #Value of func at points in def configu
+    list_xi_exp = exp_interp(list_points_def)
+    print(list_xi_exp)
+    list_xi_comp = res(list_points_def)
+    print(list_xi_comp)
 
-    #Plot data
-    plt.scatter(def_coord[:,0], def_coord[:,1], c=xi.dat.data_ro)
-    plt.colorbar()
-    plt.scatter(list_xi_comp[:,0], list_xi_comp[:,1], 'bx')
-    plt.scatter(list_xi_exp[:,0], list_xi_exp[:,1], 'wo')
-    plt.show()
+    ##Plot data
+    #plt.scatter(def_coord[:,0], def_coord[:,1], c=xi.dat.data_ro, cmap='jet')
+    #plt.colorbar()
+    #plt.show()
     
     err = np.linalg.norm(list_xi_exp - list_xi_comp)
     print(err)
@@ -156,6 +164,10 @@ def min_BC(x): #values for the BC
 #bcs = [DirichletBC(V, xi_D, 2)]
 
 #Minimizing the BC
-initial = (0, 0.3, 0.74, 0.3, 0, 0, 0.3, 0.74, 0.3, 0)
-res_min = minimize(min_BC, initial)#, method='SLSQP')
+#initial = (0, 0.3, 0.74, 0.3, 0, 0, 0.3, 0.74, 0.3, 0)
+initial = np.linspace(0, 0.74, int(N/2)+1)
+initial = np.concatenate((initial, np.flip(initial)[1:]))
+initial = np.concatenate((initial, initial))
+#print(initial.shape)
+res_min = minimize(min_BC, initial, tol=1e-3)#, method='SLSQP')
 assert res_min.success
