@@ -16,10 +16,14 @@ exp_interp = LinearNDInterpolator(data[:,:2], data[:,2])
 
 #Defining points to compare computation to experiment
 #Hand make that list with plot
-list_points_def = np.array([[0.7, 0.85], [0.84, 0.50], [0.90,0.06], [0.90, -0.06], [0.85, -0.44], [0.75, -0.87], [-0.77, 0.88], [-0.84, 0.57], [-0.91, 0.07], [-0.91, 0.07], [-0.86, -0.44], [-0.79, -0.86]])
+top_right = np.array([[0.77, 0.85], [0.80, 0.71], [0.84, 0.50], [0.87, 0.31], [0.90,0.06]])
+top_left = np.array([[-0.77, 0.88], [-0.80, 0.73], [-0.84, 0.56], [-0.88, 0.31], [-0.91, 0.07]])
+bottom_right = np.array([[0.90, -0.06], [0.87, -0.32], [0.85, -0.44], [0.82, -0.61], [0.78, -0.87]])
+bottom_left = np.array([[-0.91, -0.07], [-0.88, -0.25], [-0.86, -0.44], [-0.83, -0.61], [-0.79, -0.86]])
+list_points_def = np.concatenate((top_right,bottom_right,top_left,bottom_left))
 
 #Defining points where BC are optimized
-H = 1.4
+H = 1.45
 N = 11
 aux = np.linspace(-H/2, H/2, N)
 res = np.array([-H/2*np.ones_like(aux), aux]).T
@@ -169,5 +173,5 @@ initial = np.linspace(0, 0.74, int(N/2)+1)
 initial = np.concatenate((initial, np.flip(initial)[1:]))
 initial = np.concatenate((initial, initial))
 #print(initial.shape)
-res_min = minimize(min_BC, initial, tol=1e-3)#, method='SLSQP')
+res_min = minimize(min_BC, initial, tol=1e-3, method='BFGS')
 assert res_min.success
