@@ -11,14 +11,13 @@ import matplotlib.pyplot as plt
 #Loading exp results
 data = np.loadtxt('./experiments/aux_pull_new.txt', comments='#')
 
-#Interpolate the exp results?
+#Interpolate the exp results
 exp_interp = LinearNDInterpolator(data[:,:2], data[:,2])
 
 #Defining points to compare computation to experiment
-#Update these!
-top_right = np.array([[0.86, 0.86], [0.89, 0.60], [0.92, 0.30], [0.95,0.05]])
+top_right = np.array([[0.86, 0.86], [0.86, 0.76], [0.89, 0.60], [0.92, 0.30], [0.95,0.05]])
 top_left = np.array([[-0.85, 0.90], [-0.88, 0.68], [-0.91, 0.45], [-0.95, 0.12]])
-bottom_right = np.array([[0.93, -0.20], [0.90, -0.45], [0.88, -0.68], [0.85, -0.89]])
+bottom_right = np.array([[0.93, -0.20], [0.90, -0.45], [0.88, -0.68], [0.87, -0.79], [0.85, -0.89]])
 bottom_left = np.array([[-0.93, -0.26], [-0.90, -0.51], [-0.87, -0.75], [-0.86, -0.90]])
 list_points_def = np.concatenate((top_right,bottom_right,top_left,bottom_left))
 
@@ -40,7 +39,7 @@ PETSc.Sys.Print('Nb dof: %i' % V.dim())
 alpha = -.9
 beta = 0.9
 
-#Complaince matrix
+#Compliance matrix
 xi = Function(V, name='xi')
 mu1 = cos(xi) - alpha*sin(xi)
 mu2 = cos(xi) + beta*sin(xi)
@@ -97,8 +96,8 @@ def min_BC(x): #values for the BC
     L = assemble(l)
     solve(A, gamma, L, nullspace=nullspace)
     
-    rotation = File('aux_pull_gamma.pvd')
-    rotation.write(gamma)
+    #rotation = File('aux_pull_gamma.pvd')
+    #rotation.write(gamma)
     
     #Recovering global disp
     A = as_tensor(((mu1, Constant(0)), (Constant(0), mu2)))
@@ -120,8 +119,8 @@ def min_BC(x): #values for the BC
     yeff.interpolate(yeff - Constant((pos_x, pos_y)))
     disp = yeff.dat.data_ro - np.array([pos_x, pos_y])
     
-    disp = File('aux_pull_disp.pvd')
-    disp.write(yeff)
+    #disp = File('aux_pull_disp.pvd')
+    #disp.write(yeff)
 
     disp_aux = File('aux_pull_disp_aux.pvd')
     x = SpatialCoordinate(mesh)
@@ -136,9 +135,9 @@ def min_BC(x): #values for the BC
     #Where to get the points in def config...
     #Value of func at points in def configu
     list_xi_exp = exp_interp(list_points_def)
-    print(list_xi_exp)
+    #print(list_xi_exp)
     list_xi_comp = res(list_points_def)
-    print(list_xi_comp)
+    #print(list_xi_comp)
 
     ##Plot data
     #plt.scatter(def_coord[:,0], def_coord[:,1], c=xi.dat.data_ro, cmap='jet')
@@ -160,8 +159,8 @@ initial = np.linspace(0, 0.74, int(N/2)+1)
 initial = np.concatenate((initial, np.flip(initial)[1:]))
 initial = np.concatenate((initial, initial))
 #print(initial.shape)
-bnds = np.tensordot(np.ones_like(initial), np.array([0, 0.8]), axes=0)
-res_min = minimize(min_BC, initial, tol=1e-3, bounds=bnds) #, method='BFGS')
+bnds = np.tensordot(np.ones_like(initial), np.array([0, 0.74]), axes=0)
+res_min = minimize(min_BC, initial, tol=1e-5, bounds=bnds) #, method='BFGS')
 #res_min = minimize(min_BC, initial, tol=1e-3, jac=True, method='Newton-CG')
 assert res_min.success
 

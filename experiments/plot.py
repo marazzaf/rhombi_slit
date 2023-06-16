@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 import sys
 
 #Load data
-data = np.loadtxt('aux_pull_new.txt', comments='#')
+data = np.loadtxt('non_pull_new.txt', comments='#')
 
 ##averages
 #x = data[:,0]
@@ -18,7 +18,7 @@ data = np.loadtxt('aux_pull_new.txt', comments='#')
 #new = np.array([x-avg[0],y-avg[1],xi]).T
 ##print(data[:10,:])
 ##print(new.T[:10,:])
-#np.savetxt('aux_pull_new.txt', new, fmt='%.4f')
+#np.savetxt('non_pull_new.txt', new, fmt='%.4f')
 ##sys.exit()
 
 ##sort
@@ -33,7 +33,7 @@ plt.scatter(data[:,0], data[:,1], c=data[:,2], cmap='jet')
 plt.colorbar()
 #plt.xlim(0.5,2.4)
 #plt.ylim(0.3,1.9)
-plt.savefig('data_pull.png')
+plt.savefig('non_pull.png')
 plt.show()
 sys.exit()
 
