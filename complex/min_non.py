@@ -31,7 +31,7 @@ bottom_left = np.array([[-0.93, -0.26], [-0.90, -0.51], [-0.87, -0.75], [-0.86, 
 list_points_def = np.concatenate((top_right,bottom_right,top_left,bottom_left))
 
 #Defining points where BC are optimized
-N = 6
+N = 5
 aux = np.linspace(-H/2, H/2, N)
 res = np.array([-H/2*np.ones_like(aux), aux]).T
 list_points = np.concatenate((res,np.array([H/2*np.ones_like(aux), aux]).T))
@@ -77,7 +77,6 @@ uu = ufl.TrialFunction(W)
 vv = ufl.TestFunction(W)
 aaa = ufl.inner(ufl.grad(uu), ufl.grad(vv)) * ufl.dx
 LL = ufl.inner(ufl.dot(R, A), ufl.grad(vv)) * ufl.dx
-sys.exit()
 
 #Procedure to minimize with respects to BC
 def min_BC(x): #values for the BC
@@ -85,27 +84,12 @@ def min_BC(x): #values for the BC
     interp_BC = LinearNDInterpolator(list_points, x)
 
     #Using it as BC
-    W = VectorFunctionSpace(mesh, V.ufl_element())
-    X = interpolate(mesh.coordinates, W)
-    vec_coord = X.dat.data_ro
-    res_BC = Function(V)
+    vec_coord = mesh.geometry.x[:,:2]
+    res_bc = dolfinx.fem.Function(V)
     res = interp_BC(vec_coord[:,0],vec_coord[:,1])
-    res_BC.dat.data[:] = res
-    bcs = [DirichletBC(V, res_BC, 2)]
-    u_bc.interpolate(xi_D)
-    bc1 = dolfinx.fem.dirichletbc(u_bc, dofs_L)
-    bc2 = dolfinx.fem.dirichletbc(u_bc, dofs_R)
-
-    #Old boundary conditions
-    val_max = 0.45 #0.8416
-    val_min = 0 #0.0831
-    x = ufl.SpatialCoordinate(mesh)
-    aux1 = (val_max - val_min) * (2 - x[1]/H*2) + val_min
-    aux2 = (val_max - val_min)  * x[1]/H*2 + val_min
-    xi_D = ufl.conditional(ufl.lt(x[1], H/2), aux2, aux1)
-    xi_D = dolfinx.fem.Expression(xi_D, V.element.interpolation_points())
-    u_bc = dolfinx.fem.Function(V, dtype=np.complex128)
-    u_bc.interpolate(xi_D)
+    res_bc.vector[:] = res
+    bc1 = dolfinx.fem.dirichletbc(res_bc, dofs_L)
+    bc2 = dolfinx.fem.dirichletbc(res_bc, dofs_R)
     
     #Nonlinear problem
     problem = dolfinx.fem.petsc.NonlinearProblem(a, xi, bcs=[bc1,bc2])
@@ -150,17 +134,16 @@ def min_BC(x): #values for the BC
     bb = dolfinx.fem.petsc.create_vector(dolfinx.fem.form(LL))
     with bb.localForm() as b_loc:
                 b_loc.set(0)
-    dolfinx.fem.petsc.assemble_vector(b,dolfinx.fem.form(LL))
+    dolfinx.fem.petsc.assemble_vector(bb,dolfinx.fem.form(LL))
     
     # Create Krylov solver
     solver = PETSc.KSP().create(AA.getComm())
     solver.setOperators(AA)
     
     # Create vector that spans the null space
+    nullspace = PETSc.NullSpace().create(constant=True,comm=MPI.COMM_WORLD)
     AA.setNullSpace(nullspace)
-    # orthogonalize b with respect to the nullspace ensures that 
-    # b does not contain any component in the nullspace
-    nullspace.remove(b)
+    nullspace.remove(bb)
     
     # Finally we are able to solve our linear system ::
     y = dolfinx.fem.Function(W)
@@ -174,10 +157,12 @@ def min_BC(x): #values for the BC
 
 #Minimizing the BC
 #initial = (0, 0.3, 0.74, 0.3, 0, 0, 0.3, 0.74, 0.3, 0)
-initial = np.linspace(0, 0.74, int(N/2)+1)
+from scipy.optimize import minimize
+initial = np.linspace(0, 0.45, int(N/2)+1)
 initial = np.concatenate((initial, np.flip(initial)[1:]))
 initial = np.concatenate((initial, initial))
 #print(initial.shape)
-bnds = np.tensordot(np.ones_like(initial), np.array([0, 0.74]), axes=0)
+bnds = np.tensordot(np.ones_like(initial), np.array([0, 0.45]), axes=0)
 res_min = minimize(min_BC, initial, tol=1e-5, bounds=bnds)
 assert res_min.success
+
