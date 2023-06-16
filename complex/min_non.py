@@ -3,8 +3,8 @@ from mpi4py import MPI
 import numpy as np
 import sys
 LL,H = 1.5,1.5
-N = 20 #320 #160 #80
-mesh = dolfinx.mesh.create_rectangle(MPI.COMM_WORLD, [[-LL/2,-H/2], [LL/2,H/2]], [N, N], diagonal=dolfinx.cpp.mesh.DiagonalType.crossed)
+NN = 100 #320 #160 #80
+mesh = dolfinx.mesh.create_rectangle(MPI.COMM_WORLD, [[-LL/2,-H/2], [LL/2,H/2]], [NN, NN], diagonal=dolfinx.cpp.mesh.DiagonalType.crossed)
 num_cells = mesh.topology.index_map(2).size_local
 h = dolfinx.cpp.mesh.h(mesh, 2, range(num_cells))
 h = h.max()
@@ -31,7 +31,7 @@ bottom_left = np.array([[-0.93, -0.26], [-0.90, -0.51], [-0.87, -0.75], [-0.86, 
 list_points_def = np.concatenate((top_right,bottom_right,top_left,bottom_left))
 
 #Defining points where BC are optimized
-N = 5
+N = 11
 aux = np.linspace(-H/2, H/2, N)
 res = np.array([-H/2*np.ones_like(aux), aux]).T
 list_points = np.concatenate((res,np.array([H/2*np.ones_like(aux), aux]).T))
@@ -57,8 +57,8 @@ a = ufl.inner(ufl.dot(B, ufl.grad(xi)), ufl.grad(v)) * ufl.dx
 #Applying BC
 mesh.topology.create_connectivity(mesh.topology.dim-1, mesh.topology.dim)
 boundary_facets = dolfinx.mesh.exterior_facet_indices(mesh.topology)
-dofs_L = dolfinx.fem.locate_dofs_geometrical(V, lambda x: np.isclose(x[0], 0))
-dofs_R = dolfinx.fem.locate_dofs_geometrical(V, lambda x: np.isclose(x[0], LL))
+dofs_L = dolfinx.fem.locate_dofs_geometrical(V, lambda x: np.isclose(x[0], -LL/2))
+dofs_R = dolfinx.fem.locate_dofs_geometrical(V, lambda x: np.isclose(x[0], LL/2))
 
 #Recovering global rotation
 u = ufl.TrialFunction(V)
@@ -102,7 +102,7 @@ def min_BC(x): #values for the BC
     assert(converged)
     print(f"Number of interations: {n:d}")
     
-    with dolfinx.io.XDMFFile(mesh.comm, "non_%i_xi.xdmf" % N, "w") as xdmf:
+    with dolfinx.io.XDMFFile(mesh.comm, "non_%i_xi.xdmf" % NN, "w") as xdmf:
         xdmf.write_mesh(mesh)
         xi.name = "xi"
         xdmf.write_function(xi)
@@ -150,10 +150,25 @@ def min_BC(x): #values for the BC
     solver.solve(bb,y.vector)
     
     #Writing output
-    with dolfinx.io.XDMFFile(mesh.comm, "non_%i_disp.xdmf" % N, "w") as xdmf:
+    with dolfinx.io.XDMFFile(mesh.comm, "non_%i_disp.xdmf" % NN, "w") as xdmf:
         xdmf.write_mesh(mesh)
         y.name = "y_eff"
         xdmf.write_function(y)
+
+    #Coords in deformed configuration
+    def_coord = y.vector.array
+    def_coord = def_coord.reshape(def_coord.size //2, 2)
+    
+    #Constructing the interpolation
+    res = LinearNDInterpolator(def_coord, xi.vector.array, fill_value=10)
+    #Value of func at points in def configu
+    list_xi_exp = exp_interp(list_points_def)
+    #print(list_xi_exp)
+    list_xi_comp = res(list_points_def)
+
+    err = np.linalg.norm(list_xi_exp - list_xi_comp)
+    print(err)
+    return err
 
 #Minimizing the BC
 #initial = (0, 0.3, 0.74, 0.3, 0, 0, 0.3, 0.74, 0.3, 0)
