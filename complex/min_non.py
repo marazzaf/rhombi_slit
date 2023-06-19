@@ -2,8 +2,8 @@ import dolfinx
 from mpi4py import MPI
 import numpy as np
 import sys
-LL,H = 1.5,1.5
-NN = 100 #320 #160 #80
+LL,H = 1.55,1.55
+NN = 200 #320 #160 #80
 mesh = dolfinx.mesh.create_rectangle(MPI.COMM_WORLD, [[-LL/2,-H/2], [LL/2,H/2]], [NN, NN], diagonal=dolfinx.cpp.mesh.DiagonalType.crossed)
 num_cells = mesh.topology.index_map(2).size_local
 h = dolfinx.cpp.mesh.h(mesh, 2, range(num_cells))
@@ -24,10 +24,10 @@ exp_interp = LinearNDInterpolator(data[:,:2], data[:,2])
 
 #Defining points to compare computation to experiment
 #Update these
-top_right = np.array([[0.86, 0.86], [0.86, 0.76], [0.89, 0.60], [0.92, 0.30], [0.95,0.05]])
-top_left = np.array([[-0.85, 0.90], [-0.88, 0.68], [-0.91, 0.45], [-0.95, 0.12]])
-bottom_right = np.array([[0.93, -0.20], [0.90, -0.45], [0.88, -0.68], [0.87, -0.79], [0.85, -0.89]])
-bottom_left = np.array([[-0.93, -0.26], [-0.90, -0.51], [-0.87, -0.75], [-0.86, -0.90]])
+top_right = np.array([[0.85, 0.69], [0.86, 0.50], [0.90, 0.13]])
+top_left = np.array([[-0.82, 0.68], [-0.85, 0.40], [-0.88, 0.12]])
+bottom_right = np.array([[0.89, -0.14], [0.85, -0.51], [0.83, -0.69]])
+bottom_left = np.array([[-0.90, -0.05], [-0.87, -0.24], [-0.84, -0.43], [-0.80, -0.71]])
 list_points_def = np.concatenate((top_right,bottom_right,top_left,bottom_left))
 
 #Defining points where BC are optimized
@@ -149,6 +149,16 @@ def min_BC(x): #values for the BC
     y = dolfinx.fem.Function(W)
     solver.solve(bb,y.vector)
     
+    #Writing output for defor
+    x = ufl.SpatialCoordinate(mesh)
+    yeff_aux = dolfinx.fem.Function(W)
+    yeff_aux.interpolate(y)
+    yeff_aux.vector[:] -= vec_coord.flatten()
+    with dolfinx.io.XDMFFile(mesh.comm, "non_%i_disp_aux.xdmf" % NN, "w") as xdmf:
+        xdmf.write_mesh(mesh)
+        yeff_aux.name = "y_eff"
+        xdmf.write_function(yeff_aux)
+
     #Writing output
     with dolfinx.io.XDMFFile(mesh.comm, "non_%i_disp.xdmf" % NN, "w") as xdmf:
         xdmf.write_mesh(mesh)
@@ -161,12 +171,21 @@ def min_BC(x): #values for the BC
     
     #Constructing the interpolation
     res = LinearNDInterpolator(def_coord, xi.vector.array, fill_value=10)
-    #Value of func at points in def configu
-    list_xi_exp = exp_interp(list_points_def)
+    ##Value of func at points in def configu
+    #list_xi_exp = exp_interp(list_points_def)
     #print(list_xi_exp)
-    list_xi_comp = res(list_points_def)
+    #list_xi_comp = res(list_points_def)
+    #print(list_xi_comp)
+    #err = np.linalg.norm(list_xi_exp - list_xi_comp)
+    #print(err)
 
-    err = np.linalg.norm(list_xi_exp - list_xi_comp)
+    #Test with all values
+    list_xi_comp = res(data[:,:2])
+    #print(list_xi_comp)
+    sys.exit()
+
+
+    err = np.linalg.norm(list_xi_comp - data[:,2])
     print(err)
     return err
 
