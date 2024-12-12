@@ -1,7 +1,7 @@
 import dolfinx
 from mpi4py import MPI
 import numpy as np
-N = 200
+N = 20
 mesh = dolfinx.mesh.create_rectangle(MPI.COMM_WORLD, [[0,0], [1,1]], [N, N], diagonal=dolfinx.cpp.mesh.DiagonalType.crossed)
 V = dolfinx.fem.FunctionSpace(mesh, ("Lagrange", 1))
 
