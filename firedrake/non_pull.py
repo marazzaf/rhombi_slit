@@ -2,11 +2,17 @@ from firedrake import *
 import sys
 from firedrake.petsc import PETSc
 from firedrake.output import VTKFile
+import matplotlib.pyplot as plt
+from firedrake.pyplot import tricontourf
 
 #Mesh
-N = 80
+N = 100 #320
 L, H = 15, 15
-mesh = RectangleMesh(N, N, L, H, diagonal='crossed')
+mesh = RectangleMesh(N, N, L, H, diagonal='crossed', name='meshRef')
+h = CellDiameter(mesh)
+h_max = assemble(h * dx) / L / H
+print('h max: %.1e' % h_max)
+#sys.exit()
 
 #Function Space
 V = FunctionSpace(mesh, "CG", 1)
@@ -15,11 +21,10 @@ PETSc.Sys.Print('Nb dof: %i' % V.dim())
 #material parameters
 alpha = -.9
 beta = 0
-epsilon = 1 #.1
+epsilon = .5 #.3
 
 #Compliance matrix
 xi = Function(V, name='xi')
-#xi_r = real(xi)
 mu1 = cos(xi) - alpha*sin(xi)
 mu2 = cos(xi) + beta*sin(xi)
 mu1_p = -sin(xi) - alpha*cos(xi)
@@ -45,9 +50,24 @@ bcs = [DirichletBC(V, xi_D, 1), DirichletBC(V, xi_D, 2)]
 #Newton solver
 solve(a == 0, xi, bcs=bcs, solver_parameters={'snes_monitor': None, 'snes_max_it': 25})
 
+#Removing the complex part
+xi.interpolate(real(xi))
+
+#Writing the result
 final = VTKFile('non_pull_xi.pvd')
 final.write(xi)
-sys.exit()
+
+## Saving the result
+#with CheckpointFile("non_pull_xi.h5", 'w') as afile:
+#    afile.save_mesh(mesh)
+#    afile.save_function(xi)
+
+##Plotting results
+#fig, axes = plt.subplots()
+#contours = tricontourf(xi, axes=axes, cmap="jet")
+#axes.set_aspect("equal")
+#fig.colorbar(contours)
+#plt.show()
 
 #Recovering global rotation
 V = FunctionSpace(mesh, "CG", 1) #2
@@ -62,8 +82,8 @@ gamma = Function(V, name='gamma')
 nullspace = VectorSpaceBasis(constant=True)
 solve(a == l, gamma, nullspace=nullspace)
 
-#rotation = File('rot.pvd')
-#rotation.write(gamma)
+rotation = VTKFile('non_pull_rot.pvd')
+rotation.write(gamma)
 
 #Recovering global disp
 A = as_tensor(((mu1, Constant(0)), (Constant(0), mu2)))
@@ -78,5 +98,15 @@ l = inner(dot(R, A), grad(v))  * dx
 y = Function(W, name='yeff')
 solve(a == l, y, nullspace=nullspace)
 
-disp = File('aux_pull_disp.pvd')
+disp = VTKFile('non_pull_disp.pvd')
+#y.interpolate(y - as_vector((x[0], x[1])))
 disp.write(y)
+
+#Plotting results
+fig, axes = plt.subplots()
+contours = tricontourf(y, axes=axes, cmap="jet")
+axes.set_aspect("equal")
+fig.colorbar(contours)
+plt.show()
+
+sys.exit()
