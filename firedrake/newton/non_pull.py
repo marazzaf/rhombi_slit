@@ -140,16 +140,30 @@ deformed_coords = np.real(y.vector()[:]) #y_aux.dat.data
 x = deformed_coords[:,0]
 y = deformed_coords[:,1]
 z = np.real(Xi.vector()[:])
-#print(max(x)- min(x), max(y) - min(y))
-import scipy as sp
-X = np.linspace(min(x), max(x))
-Y = np.linspace(min(y), max(y))
-X, Y = np.meshgrid(X, Y)  # 2D grid for interpolation
-interp = sp.interpolate.LinearNDInterpolator(list(zip(x, y)), z)
-Z = interp(X, Y)
-plt.pcolormesh(X, Y, Z, shading='auto')
-#plt.plot(x, y, "ok", label="input point")
-plt.legend()
-plt.colorbar()
-plt.axis("equal")
+
+# Create a triangulation
+from matplotlib.tri import Triangulation
+tri = Triangulation(x, y)
+
+# Plot using tripcolor
+#plt.figure(figsize=(8, 6))
+plt.tripcolor(tri, z, cmap="jet", shading="flat") 
+plt.colorbar(label="z = f(x, y)")
+plt.xlabel("x")
+plt.ylabel("y")
+plt.title("z = f(x, y) without Grid (Triangulation)")
+plt.gca().set_aspect('equal')
 plt.show()
+
+#import scipy as sp
+#X = np.linspace(min(x), max(x))
+#Y = np.linspace(min(y), max(y))
+#X, Y = np.meshgrid(X, Y)  # 2D grid for interpolation
+#interp = sp.interpolate.LinearNDInterpolator(list(zip(x, y)), z)
+#Z = interp(X, Y)
+#plt.pcolormesh(X, Y, Z, shading='auto')
+#plt.plot(x, y, "ok", label="input point")
+#plt.legend()
+#plt.colorbar()
+#plt.axis("equal")
+#plt.show()
