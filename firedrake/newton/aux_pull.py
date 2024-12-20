@@ -40,7 +40,6 @@ alpha = -.9
 beta = 0.9
 
 #Compliance matrix
-#xi = variable(xi)
 mu1 = cos(xi) - alpha*sin(xi)
 mu2 = cos(xi) + beta*sin(xi)
 mu1_p = diff(mu1, xi)
@@ -50,13 +49,7 @@ Gamma21 = mu2_p / mu1
 Gamma = as_tensor(((-Gamma21, Constant(0)), (Constant(0), Gamma12)))
 DGamma = diff(Gamma, xi)
 
-#Xi = Function(V)
-#test = replace(DGamma, {xi: Xi}) #real(xi)})
-#sys.exit()
-
 #Weak formulation
-#epsilon = .5
-#Gamma += epsilon * Constant(((1j, 0), (0, 1j))) #Adding a complex dissipation
 a = inner(dot(Gamma, grad(u)), grad(v)) * dx + inner(u * dot(DGamma, grad(xi)), grad(v)) * dx
 
 #RHS
@@ -69,9 +62,6 @@ bcs = [DirichletBC(V, Constant(0), 1), DirichletBC(V, Constant(0), 2)]
 tol = 1e-5
 maxiter = 30
 d_xi = Function(V, name='increment')
-#Xi = Function(V)
-#Gamma = replace(Gamma, {xi:Xi})
-#DGamma = replace(Gamma, {xi:Xi})
 for iter in range(maxiter):
     # compute the Newton increment by solving the linearized problem
     solve(a == L, d_xi, bcs=bcs) 
@@ -84,3 +74,41 @@ for iter in range(maxiter):
 #Writing the result
 final = VTKFile('test.pvd')
 final.write(xi)
+
+#Recovering global rotation
+#Weak formulation
+a = inner(grad(u), grad(v)) * dx
+#rhs
+Gamma = as_tensor(((Constant(0), Gamma12,), (Gamma21, Constant(0))))
+l = inner(dot(Gamma, grad(xi)), grad(v)) * dx
+
+#Solving
+gamma = Function(V, name='gamma')
+nullspace = VectorSpaceBasis(constant=True)
+solve(a == l, gamma, nullspace=nullspace)
+
+rotation = VTKFile('aux_pull_rot.pvd')
+rotation.write(gamma)
+
+#Recovering global disp
+A = as_tensor(((mu1, Constant(0)), (Constant(0), mu2)))
+R = as_tensor(((cos(gamma), -sin(gamma)), (sin(gamma), cos(gamma))))
+
+W = VectorFunctionSpace(mesh, 'CG', 1) #2
+u = TrialFunction(W)
+v = TestFunction(W)
+a = inner(grad(u), grad(v)) * dx
+l = inner(dot(R, A), grad(v))  * dx
+
+y = Function(W, name='yeff')
+solve(a == l, y, nullspace=nullspace)
+
+disp = VTKFile('aux_pull_disp.pvd')
+#y.interpolate(y - as_vector((x[0], x[1])))
+disp.write(y)
+
+# Saving the result
+with CheckpointFile("Ref.h5", 'w') as afile:
+    afile.save_mesh(mesh)
+    afile.save_function(y)
+

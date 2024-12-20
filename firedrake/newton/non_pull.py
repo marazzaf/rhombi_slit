@@ -49,7 +49,7 @@ mu2_p = diff(mu2, xi)
 Gamma12 = -mu1_p / mu2
 Gamma21 = mu2_p / mu1
 Gamma = as_tensor(((-Gamma21, Constant(0)), (Constant(0), Gamma12)))
-epsilon = 5e-1 #.5
+epsilon = .5 #.5
 Gamma += epsilon * Constant(((1j, 0), (0, 1j))) #Adding a complex dissipation
 DGamma = diff(Gamma, xi)
 
@@ -60,7 +60,7 @@ bcs = [DirichletBC(V, Constant(0), 1), DirichletBC(V, Constant(0), 2)]
 tol = 1e-5
 maxiter = 30
 d_xi = Function(V, name='increment')
-Xi = Function(V)
+Xi = Function(V, name='real part xi')
 xi_res= Function(V, name='xi')
 xi_res.assign(xi_init)
 for iter in range(maxiter):
@@ -88,3 +88,68 @@ for iter in range(maxiter):
 #Writing the result
 final = VTKFile('test.pvd')
 final.write(xi_res)
+
+
+#Recovering global rotation
+#Weak formulation
+a = inner(grad(u), grad(v)) * dx
+#rhs
+Xi.interpolate(real(xi_res))
+Gamma = as_tensor(((Constant(0), Gamma12,), (Gamma21, Constant(0))))
+Gamma_aux = replace(Gamma, {xi: Xi})
+l = inner(dot(Gamma_aux, grad(Xi)), grad(v)) * dx
+
+gamma = Function(V, name='gamma')
+nullspace = VectorSpaceBasis(constant=True)
+solve(a == l, gamma, nullspace=nullspace)
+
+rotation = VTKFile('non_pull_rot.pvd')
+rotation.write(gamma)
+
+#Recovering global disp
+A = as_tensor(((mu1, Constant(0)), (Constant(0), mu2)))
+A = replace(A, {xi:Xi})
+R = as_tensor(((cos(gamma), -sin(gamma)), (sin(gamma), cos(gamma))))
+
+W = VectorFunctionSpace(mesh, 'CG', 1) #2
+u = TrialFunction(W)
+v = TestFunction(W)
+a = inner(grad(u), grad(v)) * dx
+l = inner(dot(R, A), grad(v))  * dx
+
+y = Function(W, name='yeff')
+solve(a == l, y, nullspace=nullspace)
+
+#disp = VTKFile('non_pull_disp.pvd')
+##y.interpolate(as_vector((x[0], x[1])))
+#disp.write(y)
+
+## Saving the result
+#with CheckpointFile("Ref.h5", 'w') as afile:
+#    afile.save_mesh(mesh)
+#    afile.save_function(y)
+#sys.exit()
+
+#Plotting results
+import matplotlib.pyplot as plt
+import numpy as np
+original_coords = np.real(mesh.coordinates.dat.data)
+deformed_coords = np.real(y.vector()[:]) #y_aux.dat.data
+#x = original_coords[:,0]
+#y = original_coords[:,1]
+x = deformed_coords[:,0]
+y = deformed_coords[:,1]
+z = np.real(Xi.vector()[:])
+#print(max(x)- min(x), max(y) - min(y))
+import scipy as sp
+X = np.linspace(min(x), max(x))
+Y = np.linspace(min(y), max(y))
+X, Y = np.meshgrid(X, Y)  # 2D grid for interpolation
+interp = sp.interpolate.LinearNDInterpolator(list(zip(x, y)), z)
+Z = interp(X, Y)
+plt.pcolormesh(X, Y, Z, shading='auto')
+#plt.plot(x, y, "ok", label="input point")
+plt.legend()
+plt.colorbar()
+plt.axis("equal")
+plt.show()
